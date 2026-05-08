@@ -12,6 +12,7 @@ export interface WinProbabilityResult {
     formAdj: number;         // last-5 form delta
     tableAdj: number;        // points table delta
     liveAdj: number;         // in-play delta
+    tossAdj: number;         // toss decision delta
   };
 }
 
@@ -173,11 +174,40 @@ function liveAdjustment(match: Match): number {
   return isBattingTeam1 ? clamp(delta, -35, 35) : clamp(-delta, -35, 35);
 }
 
+/**
+ * Toss adjustment: In modern T20s, chasing (bowling first) often provides a slight advantage,
+ * but this varies by venue. A basic baseline is a ~2-3% boost for winning the toss and chasing.
+ */
+function tossAdjustment(match: Match): number {
+  if (!match.tossWinner || !match.tossChoice) return 0;
+  
+  // Example baseline: If team1 wins toss and bowls (chases), small boost.
+  const isTeam1TossWinner = match.tossWinner === match.team1;
+  const choseToChase = match.tossChoice === 'field';
+  
+  let delta = 0;
+  if (choseToChase) {
+    delta = 2.5; // 2.5% boost for chasing
+  } else {
+    delta = -1.0; // slight penalty for choosing to bat first (statistically harder in many venues)
+  }
+  
+  return isTeam1TossWinner ? delta : -delta;
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Estimate win probability for a match using multiple signal layers.
  * Returns full result with per-signal breakdown for debugging/display.
+ * 
+ * Signals:
+ * - historical: Base win rate from past matchups
+ * - venueAdj: Home ground advantage (+/- 2 to 4.5%)
+ * - formAdj: Recent form momentum (up to +/- 8%)
+ * - tableAdj: Standings dominance gap (up to +/- 10%)
+ * - liveAdj: In-play momentum based on RRR and wickets (up to +/- 35%)
+ * - tossAdj: Toss decision impact (+/- 1 to 2.5%)
  */
 export function estimateWinProbabilityDetailed(
   match: Match,
@@ -190,7 +220,7 @@ export function estimateWinProbabilityDetailed(
     return {
       probabilities,
       confidence: 'high',
-      signals: { historical: 0, venueAdj: 0, formAdj: 0, tableAdj: 0, liveAdj: 0 },
+      signals: { historical: 0, venueAdj: 0, formAdj: 0, tableAdj: 0, liveAdj: 0, tossAdj: 0 },
     };
   }
 
@@ -199,8 +229,9 @@ export function estimateWinProbabilityDetailed(
   const formAdj    = formAdjustment(match, pointsTable);
   const tableAdj   = tableAdjustment(match, pointsTable);
   const liveAdj    = liveAdjustment(match);
+  const tossAdj    = tossAdjustment(match);
 
-  let raw1 = historical + venueAdj + formAdj + tableAdj + liveAdj;
+  let raw1 = historical + venueAdj + formAdj + tableAdj + liveAdj + tossAdj;
   raw1 = clamp(raw1, 1, 99);
   const raw2 = 100 - raw1;
 
@@ -209,7 +240,7 @@ export function estimateWinProbabilityDetailed(
   probabilities[match.team2] = p2;
 
   // Confidence: high when signals agree strongly, low when contradictory
-  const signalMagnitude = Math.abs(venueAdj) + Math.abs(formAdj) + Math.abs(tableAdj) + Math.abs(liveAdj);
+  const signalMagnitude = Math.abs(venueAdj) + Math.abs(formAdj) + Math.abs(tableAdj) + Math.abs(liveAdj) + Math.abs(tossAdj);
   const confidence: 'high' | 'medium' | 'low' =
     signalMagnitude > 15 ? 'high' :
     signalMagnitude > 7  ? 'medium' : 'low';
@@ -217,7 +248,7 @@ export function estimateWinProbabilityDetailed(
   return {
     probabilities,
     confidence,
-    signals: { historical, venueAdj, formAdj, tableAdj, liveAdj },
+    signals: { historical, venueAdj, formAdj, tableAdj, liveAdj, tossAdj },
   };
 }
 

@@ -64,6 +64,7 @@ export interface PointsTableEntry {
   points: number;
   nrr: number;
   qualificationChance: number;
+  recentForm?: boolean[]; // Array of recent match results (true = win, false = loss)
 }
 
 // Probability Type
