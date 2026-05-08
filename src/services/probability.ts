@@ -53,6 +53,20 @@ const FORM_WEIGHTS = [0.35, 0.25, 0.20, 0.12, 0.08];
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
+ * A seeded pseudo-random number generator (Mulberry32).
+ * This ensures that if we run the simulation 10,000 times, we get the exact same
+ * 0.1% decimals every time we refresh the page, preventing "fluttering" numbers.
+ */
+function seededRandom(seed: number) {
+  return function() {
+    var t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
+
+/**
  * Clamp a value between min and max.
  */
 function clamp(val: number, min: number, max: number): number {
@@ -344,6 +358,11 @@ export function calculateQualificationProbabilities(
   const qualCounts: Record<string, number> = {};
   pointsTable.forEach(p => { qualCounts[p.team] = 0; });
 
+  // Use a fixed seed based on the number of completed matches.
+  // This ensures the numbers stay exactly the same until a real match finishes!
+  const completedCount = matches.filter(m => m.status === 'completed').length;
+  const random = seededRandom(12345 + completedCount);
+
   for (let i = 0; i < iterations; i++) {
     const simPoints: Record<string, number> = {};
     const simNrr: Record<string, number> = {};
@@ -355,7 +374,7 @@ export function calculateQualificationProbabilities(
 
     for (const mp of matchProbs) {
       const prob1Adjusted = clamp(mp.prob1, 2, 98);
-      const isTeam1Win = (Math.random() * 100) < prob1Adjusted;
+      const isTeam1Win = (random() * 100) < prob1Adjusted;
       const winner = isTeam1Win ? mp.team1 : mp.team2;
       const loser  = isTeam1Win ? mp.team2 : mp.team1;
 
@@ -363,10 +382,10 @@ export function calculateQualificationProbabilities(
 
       // NRR: winning team gets a positive nudge, losing team a negative one.
       // Occasionally simulate a blow-out (5% chance) for heavy NRR swings.
-      const blowout = Math.random() < 0.05;
+      const blowout = random() < 0.05;
       const nrrSwing = blowout
-        ? (Math.random() * 0.5 + 0.3)  // big swing: +0.3 to +0.8
-        : (Math.random() * nrrStdDev[winner]);
+        ? (random() * 0.5 + 0.3)  // big swing: +0.3 to +0.8
+        : (random() * nrrStdDev[winner]);
       simNrr[winner] += nrrSwing;
       simNrr[loser]  -= nrrSwing * 0.8; // loser's NRR drops slightly less (asymmetric)
     }
