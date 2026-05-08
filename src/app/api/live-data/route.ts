@@ -137,10 +137,10 @@ export async function GET() {
       });
 
       // Recalculate true qualification probabilities via Monte Carlo simulation
-      const newQualProbs = calculateQualificationProbabilities(finalMatches, finalPointsTable);
+      const qualResult = calculateQualificationProbabilities(finalMatches, finalPointsTable);
       finalPointsTable.forEach((t: any) => {
-        const teamKey = t.team as keyof typeof newQualProbs;
-        t.qualificationChance = newQualProbs[teamKey];
+        const teamKey = t.team as keyof typeof qualResult.probabilities;
+        t.qualificationChance = qualResult.probabilities[teamKey];
       });
 
       // Write the updated data back to liveData.json so it persists!
