@@ -35,7 +35,7 @@ export function Navbar() {
       animate={{ y: 0 }}
       className={`fixed top-0 left-0 right-0 z-50 flex flex-col transition-all duration-300 ${
         isScrolled
-          ? 'bg-slate-950/70 backdrop-blur-2xl border-b border-white/10 shadow-[0_20px_60px_rgba(2,6,23,0.55)]'
+          ? 'bg-[#05030f]/80 backdrop-blur-2xl border-b border-white/10 shadow-[0_20px_60px_rgba(2,6,23,0.55)]'
           : 'bg-transparent pt-4'
       }`}
     >
@@ -45,13 +45,11 @@ export function Navbar() {
           {/* Logo */}
           <Link href='/' className='flex items-center space-x-3 group relative'>
             <motion.div 
-              whileHover={{ rotate: 180 }}
-              transition={{ duration: 0.5 }}
-              className='relative flex items-center justify-center w-12 h-12 rounded-2xl shadow-neon overflow-hidden neon-ring'
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              transition={{ duration: 0.3 }}
+              className='relative flex items-center justify-center w-12 h-12 rounded-2xl shadow-[0_0_20px_rgba(34,211,238,0.5)] overflow-hidden border-2 border-cyan-400/30'
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 via-fuchsia-500 to-violet-500" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_35%)]" />
-              <Trophy className="w-6 h-6 text-white" />
+              <img src="/logos/app-logo.png" alt="IPL Predictor Logo" className="w-full h-full object-cover" />
             </motion.div>
             <div className='flex flex-col'>
               <span className='font-black text-white text-xl tracking-tight leading-none'>
@@ -64,7 +62,7 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className='hidden lg:flex items-center space-x-2 bg-slate-900/55 backdrop-blur-xl px-2 py-1.5 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(15,23,42,0.45)]' aria-label="Primary navigation">
+          <div className='hidden lg:flex items-center space-x-2 bg-white/5 backdrop-blur-xl px-2 py-1.5 rounded-full border border-white/10 shadow-[0_20px_50px_rgba(15,23,42,0.45)]' aria-label="Primary navigation">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
