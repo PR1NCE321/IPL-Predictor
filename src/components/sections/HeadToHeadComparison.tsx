@@ -1,0 +1,173 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { teamInfo } from '@/data/mockData';
+import { HeadToHeadStats, Team } from '@/types';
+
+const teams = Object.keys(teamInfo) as Team[];
+
+function Bar({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between text-sm text-slate-300">
+        <span>{label}</span>
+        <span>{value}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+        <div className="h-full bg-gradient-to-r from-brand-400 to-accent-400 rounded-full" style={{ width: `${Math.max(4, value)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+export default function HeadToHeadComparison() {
+  const [team1, setTeam1] = useState<Team>('RCB');
+  const [team2, setTeam2] = useState<Team>('MI');
+  const [stats, setStats] = useState<HeadToHeadStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStats() {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(`/api/head-to-head?team1=${team1}&team2=${team2}`);
+        const json = await response.json();
+        if (!response.ok) throw new Error(json?.error || 'Failed to load comparison');
+        if (!cancelled) setStats(json);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load comparison');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [team1, team2]);
+
+  return (
+    <section className="glass-card rounded-3xl p-6 md:p-8 border border-white/10">
+      <div className="flex flex-col md:flex-row gap-4 md:items-end md:justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-black text-white tracking-tight">Head-to-Head Comparison</h2>
+          <p className="text-slate-400 mt-2">Compare historical results, recent form, and current table context.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <label className="flex flex-col gap-2 text-sm text-slate-300">
+            Team 1
+            <select className="bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-white" value={team1} onChange={(e) => setTeam1(e.target.value as Team)}>
+              {teams.map((team) => <option key={team} value={team}>{teamInfo[team].name}</option>)}
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm text-slate-300">
+            Team 2
+            <select className="bg-slate-950/80 border border-white/10 rounded-xl px-4 py-3 text-white" value={team2} onChange={(e) => setTeam2(e.target.value as Team)}>
+              {teams.map((team) => <option key={team} value={team}>{teamInfo[team].name}</option>)}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {loading && <div className="text-brand-400">Loading comparison...</div>}
+      {error && <div className="text-rose-400 text-sm">{error}</div>}
+
+      {stats && !loading && !error && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="space-y-4">
+            <Bar label={`${team1} win rate`} value={stats.team1WinRate} />
+            <Bar label={`${team2} win rate`} value={stats.team2WinRate} />
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="rounded-2xl bg-white/5 p-4">
+                <div className="text-slate-400 text-xs uppercase tracking-widest">Meetings</div>
+                <div className="text-2xl font-black text-white mt-1">{stats.meetings}</div>
+              </div>
+              <div className="rounded-2xl bg-white/5 p-4">
+                <div className="text-slate-400 text-xs uppercase tracking-widest">Last Winner</div>
+                <div className="text-2xl font-black text-white mt-1">{stats.lastWinner || 'N/A'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/5 p-5 space-y-4">
+            <h3 className="text-lg font-bold text-white">Current Context</h3>
+            <div className="space-y-3 text-sm text-slate-300">
+              <div className="flex justify-between"><span>{team1Info(team1).name} points</span><span className="font-bold text-white">{stats.pointsTable?.team1Points ?? 0}</span></div>
+              <div className="flex justify-between"><span>{team2Info(team2).name} points</span><span className="font-bold text-white">{stats.pointsTable?.team2Points ?? 0}</span></div>
+              <div className="flex justify-between"><span>{team1} qualification %</span><span className="font-bold text-white">{stats.pointsTable?.team1QualificationChance ?? 0}%</span></div>
+              <div className="flex justify-between"><span>{team2} qualification %</span><span className="font-bold text-white">{stats.pointsTable?.team2QualificationChance ?? 0}%</span></div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-white/5 p-5 space-y-4">
+            <h3 className="text-lg font-bold text-white">Recent Form</h3>
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm text-slate-300 mb-2">{team1}</div>
+                <div className="flex gap-2">
+                  {stats.recentForm.team1.map((result, index) => (
+                    <span key={index} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${result === 1 ? 'bg-green-500/20 text-green-300' : 'bg-rose-500/20 text-rose-300'}`}>{result === 1 ? 'W' : 'L'}</span>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-300 mb-2">{team2}</div>
+                <div className="flex gap-2">
+                  {stats.recentForm.team2.map((result, index) => (
+                    <span key={index} className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${result === 1 ? 'bg-green-500/20 text-green-300' : 'bg-rose-500/20 text-rose-300'}`}>{result === 1 ? 'W' : 'L'}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="lg:col-span-3 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 border border-indigo-500/20 relative overflow-hidden mt-2">
+            <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+              <svg className="w-48 h-48 -mr-12 -mt-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
+            </div>
+            <h3 className="text-lg font-bold text-indigo-300 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+              AI Match Prediction
+            </h3>
+            <p className="text-sm text-slate-400 mt-1 mb-6">Neural network prediction trained on 15 years of historical Cricsheet data.</p>
+            <div className="space-y-4 relative z-10">
+              <div className="flex justify-between text-sm font-bold">
+                <span className="text-white">{team1Info(team1).name}</span>
+                <span className="text-white">{team2Info(team2).name}</span>
+              </div>
+              <div className="h-4 rounded-full bg-white/5 overflow-hidden flex relative">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000 ease-out" 
+                  style={{ width: `${stats.aiPrediction?.team1WinProbability || 50}%` }}
+                />
+                <div 
+                  className="h-full bg-gradient-to-l from-rose-500 to-orange-500 transition-all duration-1000 ease-out flex-1" 
+                />
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-slate-900 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg border border-white/10">VS</div>
+                </div>
+              </div>
+              <div className="flex justify-between text-xs text-slate-300 font-mono tracking-wider">
+                <span>{stats.aiPrediction?.team1WinProbability || 50}%</span>
+                <span>{stats.aiPrediction?.team2WinProbability || 50}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function team1Info(team: Team) {
+  return teamInfo[team];
+}
+
+function team2Info(team: Team) {
+  return teamInfo[team];
+}
