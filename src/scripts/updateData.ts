@@ -134,7 +134,8 @@ async function updateLiveSystem() {
     // Recalculate true qualification probabilities via Monte Carlo simulation
     const newQualProbs = calculateQualificationProbabilities(finalMatches, finalPointsTable);
     finalPointsTable.forEach((t: any) => {
-      t.qualificationChance = newQualProbs[t.team];
+      const teamKey = t.team as keyof typeof newQualProbs;
+      t.qualificationChance = newQualProbs[teamKey];
     });
 
     const outputData = {
