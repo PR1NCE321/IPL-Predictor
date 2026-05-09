@@ -65,7 +65,7 @@ export async function GET() {
     for (const key of API_KEYS) {
       try {
         const response = await fetch(`${BASE_URL}/currentMatches?apikey=${key}&offset=0`, {
-          next: { revalidate: 1200 } // Fetch cache matches the route cache
+          cache: 'no-store'
         });
 
         const json = await response.json();
@@ -115,6 +115,18 @@ export async function GET() {
             finalMatches[existingMatchIndex].status = 'completed';
             finalMatches[existingMatchIndex].winner = winner as any;
 
+            // Extract margin and marginType from status string
+            const marginStr = String(apiMatch.status || '');
+            const runsMatch = marginStr.match(/(\d+)\s*runs/i);
+            const wicketsMatch = marginStr.match(/(\d+)\s*wickets/i);
+            if (runsMatch) {
+              finalMatches[existingMatchIndex].margin = parseInt(runsMatch[1], 10);
+              finalMatches[existingMatchIndex].marginType = 'runs';
+            } else if (wicketsMatch) {
+              finalMatches[existingMatchIndex].margin = parseInt(wicketsMatch[1], 10);
+              finalMatches[existingMatchIndex].marginType = 'wickets';
+            }
+
             const loser = winner === team1 ? team2 : team1;
             const wEntry = finalPointsTable.find((t: any) => t.team === winner);
             const lEntry = finalPointsTable.find((t: any) => t.team === loser);
@@ -126,6 +138,23 @@ export async function GET() {
 
               lEntry.matches += 1;
               lEntry.losses += 1;
+
+              // Simple dynamic NRR heuristic based on win margin
+              let nrrChange = 0.05;
+              const marginStr = String(apiMatch.status || '');
+              const runsMatch = marginStr.match(/(\d+)\s*runs/i);
+              const wicketsMatch = marginStr.match(/(\d+)\s*wickets/i);
+
+              if (runsMatch) {
+                const runs = parseInt(runsMatch[1], 10);
+                nrrChange = runs * 0.005;
+              } else if (wicketsMatch) {
+                const wickets = parseInt(wicketsMatch[1], 10);
+                nrrChange = wickets * 0.02;
+              }
+
+              wEntry.nrr = parseFloat((wEntry.nrr + nrrChange).toFixed(3));
+              lEntry.nrr = parseFloat((lEntry.nrr - nrrChange).toFixed(3));
             }
           }
         }

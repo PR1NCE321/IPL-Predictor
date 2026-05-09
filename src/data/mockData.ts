@@ -149,13 +149,13 @@ export const completedMatches: Match[] = [
   { id: 47, matchNumber: 47, team1: 'MI', team2: 'LSG', winner: 'MI', margin: 6, marginType: 'wickets', date: '2026-05-04', venue: 'Wankhede Stadium, Mumbai', status: 'completed' },
   { id: 48, matchNumber: 48, team1: 'DC', team2: 'CSK', winner: 'CSK', margin: 8, marginType: 'wickets', date: '2026-05-05', venue: 'Arun Jaitley Stadium, Delhi', status: 'completed' },
   { id: 49, matchNumber: 49, team1: 'SRH', team2: 'PBKS', winner: 'SRH', margin: 33, marginType: 'runs', date: '2026-05-06', venue: 'Rajiv Gandhi International Stadium, Hyderabad', status: 'completed' },
+  { id: 50, matchNumber: 50, team1: 'LSG', team2: 'RCB', winner: 'LSG', margin: 15, marginType: 'runs', date: '2026-05-07', venue: 'Ekana Stadium, Lucknow', status: 'completed' },
+  { id: 51, matchNumber: 51, team1: 'DC', team2: 'KKR', winner: 'KKR', margin: 5, marginType: 'wickets', date: '2026-05-08', venue: 'Arun Jaitley Stadium, Delhi', status: 'completed' },
+  { id: 52, matchNumber: 52, team1: 'RR', team2: 'GT', winner: 'GT', margin: 77, marginType: 'runs', date: '2026-05-09', venue: 'Sawai Mansingh Stadium, Jaipur', status: 'completed' },
 ];
 
-// ─── Upcoming Matches (50–70, sourced from CricAPI series data) ────────────────
+// ─── Upcoming Matches (53–70, sourced from CricAPI series data) ────────────────
 export const upcomingMatches: Match[] = [
-  { id: 50, matchNumber: 50, team1: 'LSG',  team2: 'RCB',  date: '2026-05-07', venue: 'Ekana Stadium, Lucknow', status: 'pending' },
-  { id: 51, matchNumber: 51, team1: 'DC',   team2: 'KKR',  date: '2026-05-08', venue: 'Arun Jaitley Stadium, Delhi', status: 'pending' },
-  { id: 52, matchNumber: 52, team1: 'RR',   team2: 'GT',   date: '2026-05-09', venue: 'Sawai Mansingh Stadium, Jaipur', status: 'pending' },
   { id: 53, matchNumber: 53, team1: 'CSK',  team2: 'LSG',  date: '2026-05-10', venue: 'MA Chidambaram Stadium, Chennai', status: 'pending' },
   { id: 54, matchNumber: 54, team1: 'RCB',  team2: 'MI',   date: '2026-05-10', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'pending' },
   { id: 55, matchNumber: 55, team1: 'PBKS', team2: 'DC',   date: '2026-05-11', venue: 'HPCA Stadium, Dharamsala', status: 'pending' },
@@ -179,19 +179,19 @@ export const upcomingMatches: Match[] = [
 
 export const allMatches = [...completedMatches, ...upcomingMatches];
 
-// ─── IPL 2026 Points Table after Match 48 (Real, verified data) ────────────────
-// Source: cricketaddictor.com / lokmattimes.com (May 6, 2026)
+// ─── IPL 2026 Points Table after Match 52 ────────────────
+// Note: Includes NRR updates for latest matches.
 export const currentPointsTable: PointsTableEntry[] = [
   { team: 'SRH', matches: 11, wins: 7, losses: 4, points: 14, nrr: 0.852, qualificationChance: 90 },
+  { team: 'GT', matches: 11, wins: 7, losses: 4, points: 14, nrr: 0.238, qualificationChance: 85 },
   { team: 'PBKS', matches: 10, wins: 6, losses: 3, points: 13, nrr: 0.612, qualificationChance: 84 },
-  { team: 'RCB', matches: 9, wins: 6, losses: 3, points: 12, nrr: 1.420, qualificationChance: 88 },
-  { team: 'RR', matches: 10, wins: 6, losses: 4, points: 12, nrr: 0.510, qualificationChance: 79 },
-  { team: 'GT', matches: 10, wins: 6, losses: 4, points: 12, nrr: -0.147, qualificationChance: 72 },
+  { team: 'RCB', matches: 10, wins: 6, losses: 4, points: 12, nrr: 1.350, qualificationChance: 88 },
+  { team: 'RR', matches: 11, wins: 6, losses: 5, points: 12, nrr: 0.150, qualificationChance: 79 },
   { team: 'CSK', matches: 10, wins: 5, losses: 5, points: 10, nrr: 0.151, qualificationChance: 48 },
-  { team: 'DC', matches: 10, wins: 4, losses: 6, points: 8, nrr: -0.949, qualificationChance: 22 },
-  { team: 'KKR', matches: 9, wins: 3, losses: 5, points: 7, nrr: -0.539, qualificationChance: 18 },
+  { team: 'KKR', matches: 10, wins: 4, losses: 5, points: 9, nrr: -0.450, qualificationChance: 30 },
+  { team: 'DC', matches: 11, wins: 4, losses: 7, points: 8, nrr: -1.020, qualificationChance: 12 },
+  { team: 'LSG', matches: 10, wins: 3, losses: 7, points: 6, nrr: -1.000, qualificationChance: 5 },
   { team: 'MI', matches: 10, wins: 3, losses: 7, points: 6, nrr: -0.649, qualificationChance: 10 },
-  { team: 'LSG', matches: 9, wins: 2, losses: 7, points: 4, nrr: -1.076, qualificationChance: 4 },
 ];
 
 // ─── Probability Trends (based on real match progression) ──────────────────────
