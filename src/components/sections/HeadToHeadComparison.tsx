@@ -130,32 +130,95 @@ export default function HeadToHeadComparison() {
             <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
               <svg className="w-48 h-48 -mr-12 -mt-12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 4.5l6.5 13h-13L12 6.5z"/></svg>
             </div>
-            <h3 className="text-lg font-bold text-indigo-300 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-              AI Match Prediction
-            </h3>
-            <p className="text-sm text-slate-400 mt-1 mb-6">Neural network prediction trained on 15 years of historical Cricsheet data.</p>
-            <div className="space-y-4 relative z-10">
-              <div className="flex justify-between text-sm font-bold">
-                <span className="text-white">{team1Info(team1).name}</span>
-                <span className="text-white">{team2Info(team2).name}</span>
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-indigo-300 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                  Advanced Probabilistic Model
+                </h3>
+                <p className="text-sm text-slate-400 mt-1">Monte Carlo simulation with dynamic reality checks (Form, Venue, Table).</p>
               </div>
-              <div className="h-4 rounded-full bg-white/5 overflow-hidden flex relative">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000 ease-out" 
-                  style={{ width: `${stats.aiPrediction?.team1WinProbability || 50}%` }}
-                />
-                <div 
-                  className="h-full bg-gradient-to-l from-rose-500 to-orange-500 transition-all duration-1000 ease-out flex-1" 
-                />
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-slate-900 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg border border-white/10">VS</div>
+              {stats.aiPrediction?.confidence && (
+                <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                  stats.aiPrediction.confidence === 'high' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  stats.aiPrediction.confidence === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                  'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                }`}>
+                  {stats.aiPrediction.confidence.toUpperCase()} CONFIDENCE
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6 relative z-10">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-bold">
+                  <span className="text-white">{team1Info(team1).name}</span>
+                  <span className="text-white">{team2Info(team2).name}</span>
+                </div>
+                <div className="h-4 rounded-full bg-white/5 overflow-hidden flex relative shadow-inner">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-1000 ease-out" 
+                    style={{ width: `${stats.aiPrediction?.team1WinProbability || 50}%` }}
+                  />
+                  <div 
+                    className="h-full bg-gradient-to-l from-rose-500 to-orange-500 transition-all duration-1000 ease-out flex-1" 
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="bg-slate-900 px-2 py-0.5 rounded-full text-[10px] font-bold text-white shadow-lg border border-white/10">VS</div>
+                  </div>
+                </div>
+                <div className="flex justify-between text-xs text-slate-300 font-mono tracking-wider">
+                  <span>{stats.aiPrediction?.team1WinProbability || 50}%</span>
+                  <span>{stats.aiPrediction?.team2WinProbability || 50}%</span>
                 </div>
               </div>
-              <div className="flex justify-between text-xs text-slate-300 font-mono tracking-wider">
-                <span>{stats.aiPrediction?.team1WinProbability || 50}%</span>
-                <span>{stats.aiPrediction?.team2WinProbability || 50}%</span>
-              </div>
+
+              {stats.aiPrediction?.signals && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4 border-t border-white/5">
+                  <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">All-Time Base Rate</div>
+                      <div className="text-sm font-bold text-white">{stats.aiPrediction.signals.historical > 50 ? Math.round(stats.aiPrediction.signals.historical) : 100 - Math.round(stats.aiPrediction.signals.historical)}%</div>
+                    </div>
+                    {stats.aiPrediction.signals.historical !== 50 ? (
+                      <div className="text-[10px] text-slate-400 mt-2">in favor of <span className="text-white font-bold">{stats.aiPrediction.signals.historical > 50 ? team1 : team2}</span></div>
+                    ) : <div className="text-[10px] text-slate-500 mt-2">Neutral</div>}
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Form Adj</div>
+                      <div className={`text-sm font-bold ${stats.aiPrediction.signals.formAdj > 0 ? 'text-green-400' : stats.aiPrediction.signals.formAdj < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                        {stats.aiPrediction.signals.formAdj > 0 ? '+' : ''}{Math.abs(stats.aiPrediction.signals.formAdj).toFixed(1)}%
+                      </div>
+                    </div>
+                    {stats.aiPrediction.signals.formAdj !== 0 ? (
+                      <div className="text-[10px] text-slate-400 mt-2">in favor of <span className="text-white font-bold">{stats.aiPrediction.signals.formAdj > 0 ? team1 : team2}</span></div>
+                    ) : <div className="text-[10px] text-slate-500 mt-2">Neutral</div>}
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Venue Adj</div>
+                      <div className={`text-sm font-bold ${stats.aiPrediction.signals.venueAdj > 0 ? 'text-green-400' : stats.aiPrediction.signals.venueAdj < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                        {stats.aiPrediction.signals.venueAdj > 0 ? '+' : ''}{Math.abs(stats.aiPrediction.signals.venueAdj).toFixed(1)}%
+                      </div>
+                    </div>
+                    {stats.aiPrediction.signals.venueAdj !== 0 ? (
+                      <div className="text-[10px] text-slate-400 mt-2">in favor of <span className="text-white font-bold">{stats.aiPrediction.signals.venueAdj > 0 ? team1 : team2}</span></div>
+                    ) : <div className="text-[10px] text-slate-500 mt-2">Neutral</div>}
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-3 flex flex-col justify-between">
+                    <div>
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Table Adj</div>
+                      <div className={`text-sm font-bold ${stats.aiPrediction.signals.tableAdj > 0 ? 'text-green-400' : stats.aiPrediction.signals.tableAdj < 0 ? 'text-rose-400' : 'text-slate-300'}`}>
+                        {stats.aiPrediction.signals.tableAdj > 0 ? '+' : ''}{Math.abs(stats.aiPrediction.signals.tableAdj).toFixed(1)}%
+                      </div>
+                    </div>
+                    {stats.aiPrediction.signals.tableAdj !== 0 ? (
+                      <div className="text-[10px] text-slate-400 mt-2">in favor of <span className="text-white font-bold">{stats.aiPrediction.signals.tableAdj > 0 ? team1 : team2}</span></div>
+                    ) : <div className="text-[10px] text-slate-500 mt-2">Neutral</div>}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

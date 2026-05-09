@@ -148,6 +148,15 @@ export interface HeadToHeadStats {
   aiPrediction?: {
     team1WinProbability: number;
     team2WinProbability: number;
+    confidence?: 'high' | 'medium' | 'low';
+    signals?: {
+      historical: number;
+      venueAdj: number;
+      formAdj: number;
+      tableAdj: number;
+      liveAdj: number;
+      tossAdj: number;
+    };
   };
 }
 
