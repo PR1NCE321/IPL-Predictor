@@ -84,14 +84,14 @@ function persistSnapshot(nextSnapshot: LiveSystemDataState) {
   window.localStorage.setItem(CACHE_TIME_KEY, String(nextSnapshot.lastUpdated ?? Date.now()));
 }
 
-async function refreshLiveData() {
+async function refreshLiveData(forceRefresh = false) {
   if (inFlightRefresh) {
     return inFlightRefresh;
   }
 
   inFlightRefresh = (async () => {
     try {
-      const data = await getLiveSystemData({ forceRefresh: true });
+      const data = await getLiveSystemData({ forceRefresh });
 
       snapshot = {
         matches: data.matches,
@@ -133,14 +133,14 @@ function initializeStore() {
     emitChange();
   }
 
-  void refreshLiveData();
+  void refreshLiveData(false);
 
   refreshTimer = globalThis.setInterval(() => {
-    void refreshLiveData();
+    void refreshLiveData(false);
   }, REFRESH_INTERVAL_MS) as unknown as ReturnType<typeof globalThis.setInterval>;
 
   window.addEventListener('focus', () => {
-    void refreshLiveData();
+    void refreshLiveData(true);
   });
 
   window.addEventListener('storage', (event) => {

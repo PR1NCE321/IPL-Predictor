@@ -3,8 +3,30 @@
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { teamInfo } from '@/data/mockData';
-import { Trophy, Activity, Target } from 'lucide-react';
+import { Trophy, Activity, Target, ArrowRight, CalendarDays } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
+
+function getPlayoffState(qualificationChance: number | undefined, rank: number, points: number) {
+  const chance = qualificationChance ?? 0;
+
+  if (rank <= 4 && chance >= 80) {
+    return { label: 'Safely in control', tone: 'text-emerald-400', badge: 'bg-emerald-500/15 border-emerald-500/25' };
+  }
+
+  if (rank <= 4 && chance >= 55) {
+    return { label: 'Playoff push', tone: 'text-green-400', badge: 'bg-green-500/15 border-green-500/25' };
+  }
+
+  if (rank <= 4) {
+    return { label: 'Top-four battle', tone: 'text-yellow-400', badge: 'bg-yellow-500/15 border-yellow-500/25' };
+  }
+
+  if (chance >= 35 || points >= 10) {
+    return { label: 'Still alive', tone: 'text-orange-400', badge: 'bg-orange-500/15 border-orange-500/25' };
+  }
+
+  return { label: 'Must-win stretch', tone: 'text-rose-400', badge: 'bg-rose-500/15 border-rose-500/25' };
+}
 
 export default function TeamsPage() {
   const { pointsTable: currentPointsTable, matches, loading, error } = useLiveSystemData();
@@ -39,6 +61,7 @@ export default function TeamsPage() {
           {Object.values(teamInfo).map((team, idx) => {
             const stats = currentPointsTable.find(t => t.team === team.shortName);
             const rank = currentPointsTable.findIndex(t => t.team === team.shortName) + 1;
+            const playoffState = getPlayoffState(stats?.qualificationChance, rank, stats?.points || 0);
             
             const teamMatches = matches?.filter(m => m.status === 'completed' && (m.team1 === team.shortName || m.team2 === team.shortName)) || [];
             const last5Matches = teamMatches.slice(-5);
@@ -99,10 +122,19 @@ export default function TeamsPage() {
                       <span className='text-rose-400 font-bold'>{stats?.losses || 0}</span>
                     </div>
                     <div className='flex justify-between items-center pt-2 mt-2 border-t border-white/5'>
-                      <span className='text-slate-400 text-sm flex items-center'><Target className="w-3 h-3 mr-1.5" /> Qual %</span>
+                      <span className='text-slate-400 text-sm flex items-center'><Target className="w-3 h-3 mr-1.5" /> Playoff odds</span>
                       <span className={`font-black ${stats && stats.qualificationChance > 70 ? 'text-green-400' : stats && stats.qualificationChance > 30 ? 'text-yellow-400' : 'text-rose-400'}`}>
-                        {stats?.qualificationChance || 0}%
+                        {Math.round(stats?.qualificationChance || 0)}%
                       </span>
+                    </div>
+                    <div className='mt-2 flex flex-col gap-1.5 rounded-xl border border-white/5 bg-slate-950/40 px-3 py-2'>
+                      <div className="flex items-center justify-between w-full">
+                        <span className='text-[10px] text-slate-500 font-bold uppercase tracking-widest'>Current state</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${playoffState.badge} ${playoffState.tone}`}>
+                          {rank <= 4 ? 'Top 4' : 'Outside 4'}
+                        </span>
+                      </div>
+                      <p className='text-sm text-white font-semibold'>{playoffState.label}</p>
                     </div>
                     <div className='flex flex-wrap items-center justify-between gap-y-2 pt-2 mt-2 border-t border-white/5'>
                       <span className='text-slate-400 text-sm flex items-center'><Activity className="w-3 h-3 mr-1.5" /> Form</span>
@@ -135,6 +167,15 @@ export default function TeamsPage() {
                       <span className="text-sm font-bold text-white truncate">{team.captain?.name}</span>
                     </div>
                   </div>
+
+                  <Link
+                    href={`/matches?team=${team.shortName}`}
+                    className='mt-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-white/10 hover:border-brand-500/30'
+                  >
+                    <CalendarDays className='h-4 w-4 text-brand-400' />
+                    View upcoming fixtures
+                    <ArrowRight className='h-4 w-4' />
+                  </Link>
                   
                   <p className='text-xs text-slate-500 text-center italic mt-4'>
                     {team.description}

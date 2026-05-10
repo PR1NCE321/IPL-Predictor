@@ -166,9 +166,9 @@ function tableAdjustment(match: Match, pointsTable: PointsTableEntry[]): number 
   const e2 = pointsTable.find(p => p.team === match.team2);
   if (!e1 || !e2) return 0;
 
-  const pointsDelta = (e1.points - e2.points) * 1.5;  // each 2-pt gap ≈ 3% boost
-  const nrrDelta    = (e1.nrr - e2.nrr) * 4;          // NRR gap (usually -2 to +2)
-  return clamp(pointsDelta + nrrDelta, -10, 10);
+  const pointsDelta = (e1.points - e2.points) * 2.5;  // each 2-pt gap ≈ 5% boost
+  const nrrDelta    = (e1.nrr - e2.nrr) * 6;          // NRR gap
+  return clamp(pointsDelta + nrrDelta, -20, 20);
 }
 
 /**
@@ -370,6 +370,7 @@ export function calculateQualificationProbabilities(
     team2: m.team2,
     prob1: getHistoricalWinProbability(m.team1, m.team2)
             + venueAdjustment(m)
+            + formAdjustment(m, pointsTable)
             + tableAdjustment(m, pointsTable),
   }));
 

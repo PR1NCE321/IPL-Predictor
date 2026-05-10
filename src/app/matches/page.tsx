@@ -2,12 +2,18 @@
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+
+import { useRouter, useSearchParams } from 'next/navigation';
 import { teamInfo, getHistoricalWinProbability } from '@/data/mockData';
-import { Calendar, Trophy, Clock, Crown, MapPin, ChevronRight, History } from 'lucide-react';
+import { Calendar, Trophy, Clock, Crown, MapPin, ChevronRight, History, Target, Users } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 
 export default function MatchesPage() {
   const { matches, loading, error } = useLiveSystemData();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const teamParam = searchParams.get('team');
+  const selectedTeam = teamParam && teamParam in teamInfo ? teamParam : 'ALL';
 
   if (loading || !matches) {
     return <div className="min-h-screen flex items-center justify-center text-brand-400">Loading Live Matches...</div>;
@@ -15,6 +21,15 @@ export default function MatchesPage() {
 
   const completedMatches = matches.filter(m => m.status === 'completed');
   const upcomingMatches = matches.filter(m => m.status === 'pending' || m.status === 'live');
+  const filteredUpcomingMatches = selectedTeam === 'ALL'
+    ? upcomingMatches
+    : upcomingMatches.filter((match) => match.team1 === selectedTeam || match.team2 === selectedTeam);
+
+  const featuredMatch = filteredUpcomingMatches[0] || upcomingMatches[0] || null;
+
+  const featuredTeamNames = featuredMatch 
+    ? [teamInfo[featuredMatch.team1].name, teamInfo[featuredMatch.team2].name] 
+    : null;
 
   return (
     <div className='relative min-h-screen pt-24 pb-16 overflow-hidden'>
@@ -37,6 +52,96 @@ export default function MatchesPage() {
           <p className='text-slate-400 text-lg max-w-2xl'>Track all completed and upcoming IPL 2026 fixtures in real-time.</p>
           {error && <p className='mt-3 text-sm text-rose-400'>Live data unavailable, showing the last successful snapshot.</p>}
         </motion.div>
+
+        <div className='mb-8 glass-card rounded-3xl p-5 border border-white/10 bg-slate-950/50'>
+          <div className='flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
+            <div>
+              <div className='flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-400 mb-2'>
+                <Target className='h-3.5 w-3.5 text-accent-400' /> Team fixture watch
+              </div>
+              <h2 className='text-xl font-black text-white'>Track one franchise's next matches</h2>
+              <p className='text-sm text-slate-400 mt-1 max-w-2xl'>Choose a team to filter the upcoming schedule and jump straight to that franchise's next fixture.</p>
+            </div>
+
+            <div className='min-w-[240px]'>
+              <label className='block text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500 mb-2'>Filter by team</label>
+              <select
+                value={selectedTeam}
+                onChange={(e) => {
+                  const nextTeam = e.target.value;
+                  const nextUrl = nextTeam === 'ALL' ? '/matches' : `/matches?team=${nextTeam}`;
+                  router.replace(nextUrl, { scroll: false });
+                }}
+                className='w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-semibold text-white outline-none transition-colors focus:border-brand-400'
+              >
+                <option value='ALL'>All teams</option>
+                {Object.entries(teamInfo).map(([key, team]) => (
+                  <option key={key} value={key}>{team.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {featuredMatch && featuredTeamNames && (
+            <div className='mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]'>
+              <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                <div className='flex items-center justify-between gap-4 mb-4'>
+                  <div>
+                    <p className='text-xs font-bold uppercase tracking-[0.24em] text-slate-500'>Next fixture</p>
+                    <h3 className='text-lg font-black text-white'>Match {featuredMatch.matchNumber}</h3>
+                  </div>
+                  <span className='rounded-full border border-accent-500/20 bg-accent-500/10 px-3 py-1 text-xs font-black text-accent-400'>
+                    {selectedTeam === 'ALL' ? 'All teams' : teamInfo[selectedTeam as keyof typeof teamInfo].shortName}
+                  </span>
+                </div>
+
+                <div className='flex items-center justify-between gap-3'>
+                  <div className='flex min-w-0 flex-1 items-center gap-3'>
+                    <div className='h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-2'>
+                      <img src={teamInfo[featuredMatch.team1].logo} alt={featuredMatch.team1} className='h-full w-full object-contain' />
+                    </div>
+                    <div className='min-w-0'>
+                      <p className='text-sm font-bold text-white'>{featuredTeamNames[0]}</p>
+                      <p className='text-xs text-slate-500'>{featuredMatch.team1}</p>
+                    </div>
+                  </div>
+
+                  <div className='rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-xs font-black italic text-slate-400'>VS</div>
+
+                  <div className='flex min-w-0 flex-1 items-center justify-end gap-3 text-right'>
+                    <div className='min-w-0'>
+                      <p className='text-sm font-bold text-white'>{featuredTeamNames[1]}</p>
+                      <p className='text-xs text-slate-500'>{featuredMatch.team2}</p>
+                    </div>
+                    <div className='h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-2'>
+                      <img src={teamInfo[featuredMatch.team2].logo} alt={featuredMatch.team2} className='h-full w-full object-contain' />
+                    </div>
+                  </div>
+                </div>
+
+                <div className='mt-4 flex flex-wrap gap-3 text-xs text-slate-400'>
+                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><Calendar className='h-3.5 w-3.5' /> {featuredMatch.date}</span>
+                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><MapPin className='h-3.5 w-3.5' /> {featuredMatch.venue}</span>
+                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><Users className='h-3.5 w-3.5' /> {featuredMatch.status === 'live' ? 'Live soon' : 'Upcoming'}</span>
+                </div>
+              </div>
+
+              <div className='rounded-2xl border border-white/10 bg-slate-950/60 p-4'>
+                <p className='text-xs font-bold uppercase tracking-[0.24em] text-slate-500'>Filtered list</p>
+                <div className='mt-2 text-3xl font-black text-white'>{filteredUpcomingMatches.length}</div>
+                <p className='mt-1 text-sm text-slate-400'>Upcoming matches for the selected view.</p>
+                {selectedTeam !== 'ALL' && (
+                  <Link
+                    href='/matches'
+                    className='mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10'
+                  >
+                    Clear filter <ChevronRight className='h-4 w-4' />
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Completed Matches */}
@@ -127,11 +232,13 @@ export default function MatchesPage() {
           <div>
             <div className="flex items-center space-x-3 mb-6">
               <div className="p-2 bg-accent-500/20 rounded-lg"><Clock className="w-5 h-5 text-accent-400" /></div>
-              <h2 className='text-2xl font-bold text-white'>Upcoming Fixtures</h2>
+              <h2 className='text-2xl font-bold text-white'>
+                {selectedTeam === 'ALL' ? 'Upcoming Fixtures' : `${teamInfo[selectedTeam as keyof typeof teamInfo].shortName} Upcoming Fixtures`}
+              </h2>
             </div>
             
             <div className='space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar'>
-              {upcomingMatches.map((match, idx) => {
+              {filteredUpcomingMatches.length > 0 ? filteredUpcomingMatches.map((match, idx) => {
                 const t1 = teamInfo[match.team1];
                 const t2 = teamInfo[match.team2];
                 const t1Prob = getHistoricalWinProbability(match.team1, match.team2);
@@ -219,7 +326,11 @@ export default function MatchesPage() {
                     </div>
                   </motion.div>
                 );
-              })}
+              }) : (
+                <div className='rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-sm text-slate-400'>
+                  No upcoming matches found for the selected team.
+                </div>
+              )}
             </div>
           </div>
         </div>

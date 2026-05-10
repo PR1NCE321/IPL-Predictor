@@ -6,6 +6,17 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
+const EXTERNAL_REFRESH_MS = 25 * 60 * 1000; // 25 minutes
+
+let serverSnapshot:
+  | {
+      matches: any[];
+      pointsTable: any[];
+      updatedAt: number;
+      isMockData: boolean;
+    }
+  | null = null;
+
 const API_KEYS = [
   "9cedf4d7-c377-4624-8a04-bc24a7a9cefe",
   "bb55c7c3-1191-47a0-b38e-e676a4f4cdaf"
@@ -40,9 +51,38 @@ function resolveWinner(apiMatch: any) {
   return undefined;
 }
 
-export async function GET() {
+function withProbabilities(matches: any[], pointsTable: any[]) {
+  return matches.map((m) => ({ ...m, probabilities: estimateWinProbability(m, pointsTable) }));
+}
+
+function buildResponse(matches: any[], pointsTable: any[], isMockData: boolean, updatedAt: number) {
+  return NextResponse.json({
+    matches: withProbabilities(matches, pointsTable),
+    pointsTable,
+    isMockData,
+    updatedAt,
+  });
+}
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const forceRefresh = searchParams.get('forceRefresh') === '1';
   let finalMatches = [...completedMatches, ...upcomingMatches];
   let finalPointsTable = JSON.parse(JSON.stringify(currentPointsTable));
+  let lastUpdated = 0;
+
+  // Treat forceRefresh from client as "bypass client cache", but server still enforces EXTERNAL_REFRESH_MS cooldown
+  // to prevent spamming CricAPI on every window focus.
+  const isCooldown = serverSnapshot && (Date.now() - serverSnapshot.updatedAt < EXTERNAL_REFRESH_MS);
+  
+  if (isCooldown) {
+    return buildResponse(
+      serverSnapshot.matches,
+      serverSnapshot.pointsTable,
+      serverSnapshot.isMockData,
+      serverSnapshot.updatedAt,
+    );
+  }
 
   // 1. Try to read from local file first to ensure continuity
   try {
@@ -52,6 +92,18 @@ export async function GET() {
       if (localData.matches && localData.pointsTable) {
         finalMatches = localData.matches;
         finalPointsTable = localData.pointsTable;
+        lastUpdated = Number(localData.updatedAt ?? 0);
+
+        if (lastUpdated > 0 && Date.now() - lastUpdated < EXTERNAL_REFRESH_MS) {
+          serverSnapshot = {
+            matches: finalMatches,
+            pointsTable: finalPointsTable,
+            updatedAt: lastUpdated,
+            isMockData: false,
+          };
+
+          return buildResponse(finalMatches, finalPointsTable, false, lastUpdated);
+        }
       }
     }
   } catch (err) {
@@ -175,28 +227,41 @@ export async function GET() {
       // Write the updated data back to liveData.json so it persists!
       try {
         const liveDataPath = path.join(process.cwd(), 'public', 'liveData.json');
-        fs.writeFileSync(liveDataPath, JSON.stringify({ matches: finalMatches, pointsTable: finalPointsTable }));
+        const now = Date.now();
+        fs.writeFileSync(
+          liveDataPath,
+          JSON.stringify({ matches: finalMatches, pointsTable: finalPointsTable, updatedAt: now }),
+        );
+        lastUpdated = now;
       } catch (err) {
         console.warn("Failed to write to liveData.json", err);
       }
 
-      // Attach lightweight win-probabilities to each match for front-end convenience
-      const matchesWithProbs = finalMatches.map((m) => ({ ...m, probabilities: estimateWinProbability(m, finalPointsTable) }));
+      if (!lastUpdated) {
+        lastUpdated = Date.now();
+      }
 
-      return NextResponse.json({
-        matches: matchesWithProbs,
+      serverSnapshot = {
+        matches: finalMatches,
         pointsTable: finalPointsTable,
-        isMockData: false
-      });
+        updatedAt: lastUpdated,
+        isMockData: false,
+      };
+
+      return buildResponse(finalMatches, finalPointsTable, false, lastUpdated);
     }
   } catch (error) {
     console.error("ISR Fetch Error:", error);
   }
 
   // Fallback if API fails
-  return NextResponse.json({
+  const fallbackUpdatedAt = lastUpdated || Date.now();
+  serverSnapshot = {
     matches: finalMatches,
     pointsTable: finalPointsTable,
-    isMockData: true
-  });
+    updatedAt: fallbackUpdatedAt,
+    isMockData: true,
+  };
+
+  return buildResponse(finalMatches, finalPointsTable, true, fallbackUpdatedAt);
 }

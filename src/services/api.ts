@@ -59,7 +59,7 @@ function resolveWinner(apiMatch: any): Team | undefined {
 // Global cache to avoid excessive API hits (resets on full page reload)
 let memCacheData_v3: any = null;
 let memCacheTime_v3: number = 0;
-const CACHE_DURATION_MS = 60 * 60 * 1000; // 60 minutes
+const CACHE_DURATION_MS = 25 * 60 * 1000; // 25 minutes
 
 export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}): Promise<{ matches: Match[]; pointsTable: PointsTableEntry[]; isMockData?: boolean }> {
   const { forceRefresh = false } = options;
@@ -71,7 +71,8 @@ export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}
 
   // 2. Fetch from our highly optimized Next.js ISR API route
   try {
-    const response = await fetch('/api/live-data');
+    const endpoint = forceRefresh ? '/api/live-data?forceRefresh=1' : '/api/live-data';
+    const response = await fetch(endpoint);
     if (response.ok) {
       const data = await response.json();
       memCacheData_v3 = data;
