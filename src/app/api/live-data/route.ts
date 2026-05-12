@@ -73,9 +73,9 @@ export async function GET(request: Request) {
 
   // Treat forceRefresh from client as "bypass client cache", but server still enforces EXTERNAL_REFRESH_MS cooldown
   // to prevent spamming CricAPI on every window focus.
-  const isCooldown = serverSnapshot && (Date.now() - serverSnapshot.updatedAt < EXTERNAL_REFRESH_MS);
-  
-  if (isCooldown) {
+  const isCooldown = serverSnapshot !== null && (Date.now() - serverSnapshot.updatedAt < EXTERNAL_REFRESH_MS);
+
+  if (isCooldown && serverSnapshot) {
     return buildResponse(
       serverSnapshot.matches,
       serverSnapshot.pointsTable,
