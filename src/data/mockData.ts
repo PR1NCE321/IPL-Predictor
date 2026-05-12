@@ -163,7 +163,7 @@ export const completedMatches: Match[] = [
 
 // ─── Upcoming Matches (56–70) ──────────────────────────────────────────────────
 export const upcomingMatches: Match[] = [
-  { id: 56, matchNumber: 56, team1: 'GT', team2: 'SRH', date: '2026-05-12', venue: 'Narendra Modi Stadium, Ahmedabad', status: 'pending' },
+  { id: 56, matchNumber: 56, team1: 'GT', team2: 'SRH', winner: 'GT', margin: 82, marginType: 'runs', date: '2026-05-12', venue: 'Narendra Modi Stadium, Ahmedabad', status: 'completed' },
   { id: 57, matchNumber: 57, team1: 'RCB', team2: 'KKR', date: '2026-05-13', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'pending' },
   { id: 58, matchNumber: 58, team1: 'PBKS', team2: 'MI', date: '2026-05-14', venue: 'HPCA Stadium, Dharamsala', status: 'pending' },
   { id: 59, matchNumber: 59, team1: 'LSG', team2: 'CSK', date: '2026-05-15', venue: 'Ekana Stadium, Lucknow', status: 'pending' },
@@ -182,17 +182,17 @@ export const upcomingMatches: Match[] = [
 
 export const allMatches = [...completedMatches, ...upcomingMatches];
 
-// ─── IPL 2026 Official Points Table after Match 55 ───────────────────────────
+// ─── IPL 2026 Official Points Table after Match 56 ───────────────────────────
 // Source: iplt20.com/matches/points-table (verified May 12 2026)
 export const currentPointsTable: PointsTableEntry[] = [
-  { team: 'RCB',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  1.103, qualificationChance: 90 },
-  { team: 'SRH',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  0.737, qualificationChance: 88 },
-  { team: 'GT',   matches: 11, wins: 7, losses: 4, points: 14, nrr:  0.228, qualificationChance: 85 },
-  { team: 'PBKS', matches: 11, wins: 6, losses: 4, noResults: 1, points: 13, nrr: 0.428, qualificationChance: 78 },
-  { team: 'CSK',  matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.185, qualificationChance: 60 },
-  { team: 'RR',   matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.082, qualificationChance: 55 },
-  { team: 'DC',   matches: 12, wins: 5, losses: 7, points: 10, nrr: -0.993, qualificationChance: 15 },
-  { team: 'KKR',  matches: 10, wins: 4, losses: 5, noResults: 1, points: 9, nrr: -0.169, qualificationChance: 10 },
+  { team: 'RCB',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  1.103, qualificationChance: 87 },
+  { team: 'SRH',  matches: 12, wins: 7, losses: 5, points: 14, nrr:  0.327, qualificationChance: 58 },
+  { team: 'GT',   matches: 12, wins: 8, losses: 4, points: 16, nrr:  0.638, qualificationChance: 96 },
+  { team: 'PBKS', matches: 11, wins: 6, losses: 4, noResults: 1, points: 13, nrr: 0.428, qualificationChance: 63 },
+  { team: 'CSK',  matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.185, qualificationChance: 45 },
+  { team: 'RR',   matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.082, qualificationChance: 52 },
+  { team: 'DC',   matches: 12, wins: 5, losses: 7, points: 10, nrr: -0.993, qualificationChance: 0 },
+  { team: 'KKR',  matches: 10, wins: 4, losses: 5, noResults: 1, points: 9, nrr: -0.169, qualificationChance: 3 },
   { team: 'MI',   matches: 11, wins: 3, losses: 8, points:  6, nrr: -0.585, qualificationChance: 0 },
   { team: 'LSG',  matches: 11, wins: 3, losses: 8, points:  6, nrr: -0.907, qualificationChance: 0 },
 ];
