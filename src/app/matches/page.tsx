@@ -486,7 +486,7 @@ function CompletedRow({ match: m, allCompleted, idx }: { match: any; allComplete
   const isT1Win = m.winner === m.team1;
   const isT2Win = m.winner === m.team2;
   const noResult = !m.winner;
-  const winnerTeam = m.winner ? teamInfo[m.winner] : null;
+  const winnerTeam = m.winner ? teamInfo[m.winner as Team] : null;
 
   // Win streak badge
   const winnerStreak = m.winner ? getWinStreak(m.winner, allCompleted) : 0;
