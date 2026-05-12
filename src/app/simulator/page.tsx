@@ -24,7 +24,7 @@ export default function SimulatorPage() {
   const [targetTeam, setTargetTeam] = useState<string>('NONE');
   const [hasSavedScenario, setHasSavedScenario] = useState(false);
   const [simMode, setSimMode] = useState<'quick' | 'deep'>('quick');
-  const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
+  const [selectedWinner, setSelectedWinner] = useState<Team | null>(null);
   const [marginType, setMarginType] = useState<MarginType>('runs');
   const [marginValue, setMarginValue] = useState<string>('');
   const [t1Runs, setT1Runs] = useState(''); const [t1Overs, setT1Overs] = useState('20');
@@ -49,7 +49,7 @@ export default function SimulatorPage() {
     } else { setSelectedWinner(null); setMarginType('runs'); setMarginValue(''); setT1Runs(''); setT2Runs(''); setT1Overs('20'); setT2Overs('20'); }
   };
 
-  const applySimulation = (winner: string, mType: MarginType, mValue: number) => {
+  const applySimulation = (winner: Team, mType: MarginType, mValue: number) => {
     if (!currentMatch) return;
     setSimulatedMatches(prev => ({ ...prev, [currentMatch.id]: { matchId: currentMatch.id, mode: 'quick', winner, marginType: mType, marginValue: mValue } }));
     const nextIdx = liveMatches!.findIndex(m => m.id !== currentMatch.id && !simulatedMatches[m.id]);
