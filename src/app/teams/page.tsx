@@ -5,182 +5,141 @@ import { motion } from 'framer-motion';
 import { teamInfo } from '@/data/mockData';
 import { Trophy, Activity, Target, ArrowRight, CalendarDays } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
+import { useCountUp } from '@/hooks/useCountUp';
 
-function getPlayoffState(qualificationChance: number | undefined, rank: number, points: number) {
+function AnimatedNum({ value }: { value: number }) {
+  const v = useCountUp(value, 800, 0);
+  return <>{v}</>;
+}
+
+function getPlayoffState(qualificationChance: number | undefined, rank: number) {
   const chance = qualificationChance ?? 0;
-
-  if (rank <= 4 && chance >= 80) {
-    return { label: 'Safely in control', tone: 'text-emerald-400', badge: 'bg-emerald-500/15 border-emerald-500/25' };
-  }
-
-  if (rank <= 4 && chance >= 55) {
-    return { label: 'Playoff push', tone: 'text-green-400', badge: 'bg-green-500/15 border-green-500/25' };
-  }
-
-  if (rank <= 4) {
-    return { label: 'Top-four battle', tone: 'text-yellow-400', badge: 'bg-yellow-500/15 border-yellow-500/25' };
-  }
-
-  if (chance >= 35 || points >= 10) {
-    return { label: 'Still alive', tone: 'text-orange-400', badge: 'bg-orange-500/15 border-orange-500/25' };
-  }
-
-  return { label: 'Must-win stretch', tone: 'text-rose-400', badge: 'bg-rose-500/15 border-rose-500/25' };
+  if (rank <= 4 && chance >= 80) return { label: 'Safely in control', color: '#1D9E75' };
+  if (rank <= 4 && chance >= 55) return { label: 'Playoff push', color: '#1D9E75' };
+  if (rank <= 4) return { label: 'Top-four battle', color: '#D4AF37' };
+  if (chance >= 35) return { label: 'Still alive', color: '#D4AF37' };
+  return { label: 'Must-win stretch', color: '#E8003D' };
 }
 
 export default function TeamsPage() {
   const { pointsTable: currentPointsTable, matches, loading, error } = useLiveSystemData();
 
   if (loading || !currentPointsTable) {
-    return <div className="min-h-screen flex items-center justify-center text-brand-400">Loading Live Team Data...</div>;
+    return (
+      <div className='min-h-screen p-8'>
+        <div className='max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4'>
+          {Array.from({ length: 10 }).map((_, i) => <div key={i} className='skeleton h-64 w-full' />)}
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className='relative min-h-screen pt-24 pb-16 overflow-hidden'>
-      {/* Decorative Background */}
-      <div className="absolute top-40 left-0 w-[500px] h-[500px] bg-brand-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+    <div className='min-h-screen p-6 md:p-8'>
+      <div className='max-w-6xl mx-auto'>
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className='mb-12'
+          initial={{ x: 40, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className='mb-8'
         >
-
-          <h1 className='text-4xl md:text-5xl font-black mb-4 tracking-tight'>
-            <span className='text-gradient bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite]'>
-              Franchise Intelligence
-            </span>
+          <p className='section-label mb-2'>IPL 2026</p>
+          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+            FRANCHISE INTELLIGENCE
           </h1>
-          <p className='text-slate-400 text-lg max-w-2xl'>Deep dive into all 10 IPL franchises with performance metrics and qualification scenarios.</p>
-          {error && <p className='mt-3 text-sm text-rose-400'>Live data unavailable, showing the last successful snapshot.</p>}
+          <p style={{ color: '#8890A0', marginTop: 8, fontSize: 14 }}>All 10 franchises — stats, form, and qualification outlook.</p>
+          {error && <p className='mt-2 text-xs' style={{ color: '#E8003D' }}>Live data unavailable.</p>}
         </motion.div>
 
-        {/* Teams Grid */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6'>
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4'>
           {Object.values(teamInfo).map((team, idx) => {
             const stats = currentPointsTable.find(t => t.team === team.shortName);
             const rank = currentPointsTable.findIndex(t => t.team === team.shortName) + 1;
-            const playoffState = getPlayoffState(stats?.qualificationChance, rank, stats?.points || 0);
-            
+            const playoffState = getPlayoffState(stats?.qualificationChance, rank);
+
             const teamMatches = matches?.filter(m => m.status === 'completed' && (m.team1 === team.shortName || m.team2 === team.shortName)) || [];
-            const last5Matches = teamMatches.slice(-5);
-            const formGuide = last5Matches.map(m => m.winner === team.shortName ? 'W' : 'L');
-            
+            const formGuide = teamMatches.slice(-5).map(m => m.winner === team.shortName ? 'W' : 'L');
+
             return (
               <motion.div
                 key={team.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className={`glass-card rounded-3xl p-6 group relative overflow-hidden transition-all duration-300 hover:-translate-y-2 flex flex-col h-full ${rank <= 4 ? 'border-brand-500/30' : 'border-white/10'}`}
-                style={{ '--hover-color': team.color } as React.CSSProperties}
+                initial={{ y: 12, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: idx * 0.04 }}
+                className='surface-card p-5 flex flex-col'
+                style={{ borderTop: `3px solid ${team.color}` }}
               >
-                {rank <= 4 && (
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-brand-500/20 rounded-bl-3xl flex items-center justify-center">
-                    <Target className="w-5 h-5 text-brand-400 animate-pulse" />
+                {/* Team Header */}
+                <div className='flex items-center gap-3 mb-4'>
+                  <div className='w-10 h-10 rounded overflow-hidden' style={{ background: '#1A1D26', padding: 4 }}>
+                    <img src={team.logo} alt={team.shortName} className='w-full h-full object-contain'
+                      onError={(e) => { (e.target as HTMLImageElement).src = team.fallbackLogo || ''; }} />
+                  </div>
+                  <div>
+                    <p className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{team.shortName}</p>
+                    <p style={{ fontSize: 10, color: '#3D4356' }}>RANK {rank} {rank === 1 && '★'}</p>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className='space-y-2 mb-4 flex-1'>
+                  <div className='flex justify-between'>
+                    <span style={{ fontSize: 11, color: '#8890A0' }}>W / L</span>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>
+                      <span style={{ color: '#1D9E75' }}>{stats?.wins || 0}</span>
+                      <span style={{ color: '#3D4356' }}> / </span>
+                      <span style={{ color: '#E8003D' }}>{stats?.losses || 0}</span>
+                    </span>
+                  </div>
+                  <div className='flex justify-between'>
+                    <span style={{ fontSize: 11, color: '#8890A0' }}>Points</span>
+                    <span className='font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{stats?.points || 0}</span>
+                  </div>
+                  <div className='flex justify-between'>
+                    <span style={{ fontSize: 11, color: '#8890A0' }}>Qual %</span>
+                    <span className='font-bold' style={{ color: playoffState.color }}>
+                      <AnimatedNum value={Math.round(stats?.qualificationChance || 0)} />%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Form */}
+                <div className='mb-4'>
+                  <p style={{ fontSize: 10, color: '#3D4356', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>FORM</p>
+                  <div className='flex gap-1'>
+                    {formGuide.length > 0 ? formGuide.map((r, i) => (
+                      <div key={i} className='w-5 h-5 rounded flex items-center justify-center' style={{
+                        fontSize: 9, fontWeight: 700,
+                        background: r === 'W' ? 'rgba(29,158,117,0.15)' : 'rgba(232,0,61,0.1)',
+                        color: r === 'W' ? '#1D9E75' : '#E8003D',
+                      }}>{r}</div>
+                    )) : <span style={{ fontSize: 10, color: '#3D4356' }}>N/A</span>}
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div className='rounded p-2 mb-3' style={{ background: '#0D0F14', border: '1px solid #1E2028' }}>
+                  <p style={{ fontSize: 9, color: '#3D4356', letterSpacing: '0.08em', textTransform: 'uppercase' }}>STATUS</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: playoffState.color }}>{playoffState.label}</p>
+                </div>
+
+                {/* Captain */}
+                {team.captain && (
+                  <div className='flex items-center gap-2 mb-3' style={{ borderTop: '1px solid #1E2028', paddingTop: 8 }}>
+                    <div className='w-7 h-7 rounded-full overflow-hidden' style={{ border: '1px solid #1E2028' }}>
+                      <img src={team.captain.image} alt={team.captain.name} className='w-full h-full object-cover'
+                        onError={(e) => { (e.target as HTMLImageElement).src = team.captain?.fallbackImage || ''; }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 9, color: '#3D4356', textTransform: 'uppercase', letterSpacing: '0.08em' }}>CAPTAIN</p>
+                      <p style={{ fontSize: 11, color: '#E8E8E8', fontWeight: 600 }}>{team.captain.name}</p>
+                    </div>
                   </div>
                 )}
-                {/* Dynamic hover glow based on team color */}
-                <div 
-                  className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full blur-[50px] opacity-0 group-hover:opacity-30 transition-opacity duration-500"
-                  style={{ backgroundColor: team.color }}
-                ></div>
 
-                <div className="relative z-10 flex flex-col items-center mb-6">
-                  <div 
-                    className='w-32 h-32 rounded-2xl flex items-center justify-center mb-4 shadow-[0_0_32px_rgba(0,0,0,0.5),0_8px_20px_rgba(0,0,0,0.3)] border-4 border-white/30 transform group-hover:scale-110 transition-all duration-300 overflow-hidden bg-gradient-to-br from-white/20 via-white/10 to-white/0 p-4 group-hover:shadow-[0_0_40px_rgba(0,0,0,0.6),0_12px_30px_rgba(0,0,0,0.4)] group-hover:border-white/40'
-                    style={{ borderColor: team.color }}
-                  >
-                    <div className="absolute inset-0 rounded-[inherit] bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
-                    <img
-                      src={team.logo}
-                      alt={`${team.shortName} Logo`}
-                      className="w-full h-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] relative z-10"
-                      onError={(e) => {
-                        const img = e.currentTarget as HTMLImageElement;
-                        img.onerror = null;
-                        img.src = team.fallbackLogo || `https://ui-avatars.com/api/?name=${team.shortName}&background=random&color=fff`;
-                      }}
-                    />
-                  </div>
-                  <h3 className='text-lg font-bold text-white text-center leading-tight mb-1'>{team.name}</h3>
-                  <div className="flex items-center justify-center space-x-1 mt-1">
-                    <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Rank {rank}</span>
-                    {rank === 1 && <Trophy className="w-3 h-3 text-amber-400" />}
-                  </div>
-                </div>
-
-                <div className='space-y-4 relative z-10 flex-1 flex flex-col justify-end'>
-                  <div className='bg-white/5 rounded-xl p-4 border border-white/5'>
-                    <div className='flex justify-between items-center mb-2'>
-                      <span className='text-slate-400 text-sm flex items-center'><Trophy className="w-3 h-3 mr-1.5" /> Wins</span>
-                      <span className='text-green-400 font-bold'>{stats?.wins || 0}</span>
-                    </div>
-                    <div className='flex justify-between items-center mb-2'>
-                      <span className='text-slate-400 text-sm flex items-center'><Activity className="w-3 h-3 mr-1.5" /> Losses</span>
-                      <span className='text-rose-400 font-bold'>{stats?.losses || 0}</span>
-                    </div>
-                    <div className='flex justify-between items-center pt-2 mt-2 border-t border-white/5'>
-                      <span className='text-slate-400 text-sm flex items-center'><Target className="w-3 h-3 mr-1.5" /> Playoff odds</span>
-                      <span className={`font-black ${stats && stats.qualificationChance > 70 ? 'text-green-400' : stats && stats.qualificationChance > 30 ? 'text-yellow-400' : 'text-rose-400'}`}>
-                        {Math.round(stats?.qualificationChance || 0)}%
-                      </span>
-                    </div>
-                    <div className='mt-2 flex flex-col gap-1.5 rounded-xl border border-white/5 bg-slate-950/40 px-3 py-2'>
-                      <div className="flex items-center justify-between w-full">
-                        <span className='text-[10px] text-slate-500 font-bold uppercase tracking-widest'>Current state</span>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest ${playoffState.badge} ${playoffState.tone}`}>
-                          {rank <= 4 ? 'Top 4' : 'Outside 4'}
-                        </span>
-                      </div>
-                      <p className='text-sm text-white font-semibold'>{playoffState.label}</p>
-                    </div>
-                    <div className='flex flex-wrap items-center justify-between gap-y-2 pt-2 mt-2 border-t border-white/5'>
-                      <span className='text-slate-400 text-sm flex items-center'><Activity className="w-3 h-3 mr-1.5" /> Form</span>
-                      <div className="flex gap-1">
-                        {formGuide.length > 0 ? formGuide.map((res, i) => (
-                          <span key={i} className={`flex items-center justify-center w-4 h-4 rounded-sm text-[9px] font-bold ${res === 'W' ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'}`}>
-                            {res}
-                          </span>
-                        )) : <span className="text-xs text-slate-500">N/A</span>}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Captain Profile */}
-                  <div className='bg-slate-900/50 rounded-2xl p-3 border border-white/5 flex items-center space-x-3 mt-4'>
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/10 shadow-inner shrink-0">
-                      <img
-                        src={team.captain?.image}
-                        alt={team.captain?.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const img = e.currentTarget as HTMLImageElement;
-                          img.onerror = null;
-                          img.src = team.captain?.fallbackImage || `https://ui-avatars.com/api/?name=${team.captain?.name}&background=random&color=fff`;
-                        }}
-                      />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Captain</span>
-                      <span className="text-sm font-bold text-white truncate">{team.captain?.name}</span>
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/matches?team=${team.shortName}`}
-                    className='mt-4 inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-white/10 hover:border-brand-500/30'
-                  >
-                    <CalendarDays className='h-4 w-4 text-brand-400' />
-                    View upcoming fixtures
-                    <ArrowRight className='h-4 w-4' />
-                  </Link>
-                  
-                  <p className='text-xs text-slate-500 text-center italic mt-4'>
-                    {team.description}
-                  </p>
-                </div>
+                <Link href={`/matches?team=${team.shortName}`} className='flex items-center justify-center gap-1 py-2 rounded text-xs font-semibold' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#8890A0' }}>
+                  <CalendarDays size={12} /> Fixtures <ArrowRight size={12} />
+                </Link>
               </motion.div>
             );
           })}

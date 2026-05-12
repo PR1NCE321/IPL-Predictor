@@ -6,7 +6,7 @@ import path from 'path';
 
 export const dynamic = 'force-dynamic';
 
-const EXTERNAL_REFRESH_MS = 25 * 60 * 1000; // 25 minutes
+const EXTERNAL_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
 let serverSnapshot:
   | {
@@ -18,9 +18,9 @@ let serverSnapshot:
   | null = null;
 
 const API_KEYS = [
-  "9cedf4d7-c377-4624-8a04-bc24a7a9cefe",
-  "bb55c7c3-1191-47a0-b38e-e676a4f4cdaf"
-
+  "bb55c7c3-1191-47a0-b38e-e676a4f4cdaf",
+  "cf9a4921-876e-49bd-8dc9-9d3a4c1b984b",
+  "9cedf4d7-c377-4624-8a04-bc24a7a9cefe"
 ];
 const BASE_URL = "https://api.cricapi.com/v1";
 
@@ -149,15 +149,25 @@ export async function GET(request: Request) {
         const team1 = teamNameMap[apiMatch.teams?.[0]?.toLowerCase()];
         const team2 = teamNameMap[apiMatch.teams?.[1]?.toLowerCase()];
 
-        const matchNumberMatch = apiMatch.name.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i);
-        const matchNumber = matchNumberMatch ? Number(matchNumberMatch[1]) : undefined;
+        const m = 
+          apiMatch.name.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i) ||
+          apiMatch.name.match(/Match\s+(\d+)/i) ||
+          apiMatch.name.match(/Match\s*-\s*(\d+)/i);
+        
+        const matchNumber = m ? Number(m[1]) : undefined;
 
-        const existingMatchIndex = matchNumber
+        let existingMatchIndex = matchNumber
           ? finalMatches.findIndex(m => m.matchNumber === matchNumber)
-          : finalMatches.findIndex(m =>
-            (m.team1 === team1 && m.team2 === team2) ||
-            (m.team1 === team2 && m.team2 === team1)
+          : -1;
+
+        if (existingMatchIndex === -1) {
+          // If match number fails, find the pending/live match between these teams
+          // This prevents updating the 1st leg of the tournament (which is already completed)
+          existingMatchIndex = finalMatches.findIndex(m =>
+            ((m.team1 === team1 && m.team2 === team2) || (m.team1 === team2 && m.team2 === team1)) &&
+            m.status !== 'completed'
           );
+        }
 
         if (existingMatchIndex !== -1 && apiMatch.matchEnded) {
           const winner = resolveWinner(apiMatch);
@@ -207,6 +217,22 @@ export async function GET(request: Request) {
 
               wEntry.nrr = parseFloat((wEntry.nrr + nrrChange).toFixed(3));
               lEntry.nrr = parseFloat((lEntry.nrr - nrrChange).toFixed(3));
+            }
+          } else if (!winner && previousStatus !== 'completed') {
+            // Handle NO RESULT / ABANDONED
+            finalMatches[existingMatchIndex].status = 'completed';
+            
+            const wEntry = finalPointsTable.find((t: any) => t.team === team1);
+            const lEntry = finalPointsTable.find((t: any) => t.team === team2);
+
+            if (wEntry && lEntry) {
+              wEntry.matches += 1;
+              wEntry.noResults = (wEntry.noResults || 0) + 1;
+              wEntry.points += 1;
+
+              lEntry.matches += 1;
+              lEntry.noResults = (lEntry.noResults || 0) + 1;
+              lEntry.points += 1;
             }
           }
         }

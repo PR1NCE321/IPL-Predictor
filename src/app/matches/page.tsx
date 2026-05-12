@@ -1,340 +1,590 @@
 'use client';
 
-import Link from 'next/link';
+import React from 'react';
 import { motion } from 'framer-motion';
-
 import { useRouter, useSearchParams } from 'next/navigation';
 import { teamInfo, getHistoricalWinProbability } from '@/data/mockData';
-import { Calendar, Trophy, Clock, Crown, MapPin, ChevronRight, History, Target, Users } from 'lucide-react';
+import { Calendar, MapPin, ChevronDown, Clock, Timer, Flame } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
+import { useState, useMemo } from 'react';
+
+// Venue city color map
+const venueColors: Record<string, string> = {
+  'Mumbai': '#0078D7', 'Wankhede': '#0078D7',
+  'Bengaluru': '#E8003D', 'Chinnaswamy': '#E8003D',
+  'Chennai': '#D4AF37', 'Chepauk': '#D4AF37', 'MA Chidambaram': '#D4AF37',
+  'Kolkata': '#6B21A8', 'Eden Gardens': '#6B21A8',
+  'Hyderabad': '#F97316', 'Rajiv Gandhi': '#F97316',
+  'Ahmedabad': '#1D9E75', 'Narendra Modi': '#1D9E75',
+  'Delhi': '#3B82F6', 'Arun Jaitley': '#3B82F6',
+  'Jaipur': '#EC4899', 'Sawai Mansingh': '#EC4899',
+  'Mohali': '#EF4444', 'Dharamsala': '#10B981',
+  'Lucknow': '#06B6D4', 'BRSABV': '#06B6D4', 'Ekana': '#06B6D4',
+};
+
+function getVenueColor(venue: string): string {
+  for (const [key, color] of Object.entries(venueColors)) {
+    if (venue.includes(key)) return color;
+  }
+  return '#8890A0';
+}
+
+function getVenueCity(venue: string): string {
+  return venue.split(',')[0].trim();
+}
+
+// Group matches by date
+function groupByDate<T extends { date: string }>(matches: T[]): Record<string, T[]> {
+  const groups: Record<string, T[]> = {};
+  for (const m of matches) {
+    if (!groups[m.date]) groups[m.date] = [];
+    groups[m.date].push(m);
+  }
+  return groups;
+}
+
+// Get win streak for a team
+function getWinStreak(team: string, completedMatches: any[]): number {
+  const teamMatches = completedMatches
+    .filter(m => m.team1 === team || m.team2 === team)
+    .reverse();
+  let streak = 0;
+  for (const m of teamMatches) {
+    if (m.winner === team) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// Format date nicely
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const matchDate = new Date(d);
+  matchDate.setHours(0, 0, 0, 0);
+
+  if (matchDate.getTime() === today.getTime()) return 'Today';
+  if (matchDate.getTime() === tomorrow.getTime()) return 'Tomorrow';
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+type TabType = 'all' | 'upcoming' | 'completed';
 
 export default function MatchesPage() {
-  const { matches, loading, error } = useLiveSystemData();
+  const { matches, pointsTable, loading, error } = useLiveSystemData();
   const router = useRouter();
   const searchParams = useSearchParams();
   const teamParam = searchParams.get('team');
   const selectedTeam = teamParam && teamParam in teamInfo ? teamParam : 'ALL';
+  const [activeTab, setActiveTab] = useState<TabType>('all');
 
   if (loading || !matches) {
-    return <div className="min-h-screen flex items-center justify-center text-brand-400">Loading Live Matches...</div>;
+    return (
+      <div className='min-h-screen p-8'>
+        <div className='max-w-6xl mx-auto space-y-3'>
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className='skeleton h-20 w-full' />)}
+        </div>
+      </div>
+    );
   }
 
-  const completedMatches = matches.filter(m => m.status === 'completed');
-  const upcomingMatches = matches.filter(m => m.status === 'pending' || m.status === 'live');
-  const filteredUpcomingMatches = selectedTeam === 'ALL'
-    ? upcomingMatches
-    : upcomingMatches.filter((match) => match.team1 === selectedTeam || match.team2 === selectedTeam);
+  const today = new Date().toISOString().split('T')[0];
+  const allCompleted = matches.filter(m => m.status === 'completed');
+  const allUpcoming = matches.filter(m => m.status === 'pending' || m.status === 'live');
 
-  const featuredMatch = filteredUpcomingMatches[0] || upcomingMatches[0] || null;
+  const filteredCompleted = selectedTeam === 'ALL' ? allCompleted : allCompleted.filter(m => m.team1 === selectedTeam || m.team2 === selectedTeam);
+  const filteredUpcoming = selectedTeam === 'ALL' ? allUpcoming : allUpcoming.filter(m => m.team1 === selectedTeam || m.team2 === selectedTeam);
 
-  const featuredTeamNames = featuredMatch 
-    ? [teamInfo[featuredMatch.team1].name, teamInfo[featuredMatch.team2].name] 
-    : null;
+  const completed = filteredCompleted.slice().reverse();
+  const upcoming = filteredUpcoming;
+
+  // Next match spotlight
+  const nextMatch = upcoming[0] || null;
+
+  // Date groups — skip the spotlight match from the list
+  const upcomingWithoutSpotlight = nextMatch ? upcoming.filter(m => m.id !== nextMatch.id) : upcoming;
+  const upcomingGroups = groupByDate(upcomingWithoutSpotlight);
+  const completedGroups = groupByDate(completed);
 
   return (
-    <div className='relative min-h-screen pt-24 pb-16 overflow-hidden'>
-      {/* Decorative Background */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent-500/10 blur-[120px] rounded-full pointer-events-none"></div>
-
-      <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+    <div className='min-h-screen p-6 md:p-8'>
+      <div className='max-w-6xl mx-auto'>
+        {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className='mb-12'
+          initial={{ x: 40, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className='mb-6'
         >
-
-          <h1 className='text-4xl md:text-5xl font-black mb-4 tracking-tight'>
-            <span className='text-gradient bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite]'>
-              Live Action Hub
-            </span>
+          <p className='section-label mb-2'>IPL 2026</p>
+          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+            MATCH CENTER
           </h1>
-          <p className='text-slate-400 text-lg max-w-2xl'>Track all completed and upcoming IPL 2026 fixtures in real-time.</p>
-          {error && <p className='mt-3 text-sm text-rose-400'>Live data unavailable, showing the last successful snapshot.</p>}
+          {error && <p className='mt-2 text-xs' style={{ color: '#E8003D' }}>Live data unavailable — showing cached data.</p>}
         </motion.div>
 
-        <div className='mb-8 glass-card rounded-3xl p-5 border border-white/10 bg-slate-950/50'>
-          <div className='flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
-            <div>
-              <div className='flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-slate-400 mb-2'>
-                <Target className='h-3.5 w-3.5 text-accent-400' /> Team fixture watch
-              </div>
-              <h2 className='text-xl font-black text-white'>Track one franchise's next matches</h2>
-              <p className='text-sm text-slate-400 mt-1 max-w-2xl'>Choose a team to filter the upcoming schedule and jump straight to that franchise's next fixture.</p>
-            </div>
-
-            <div className='min-w-[240px]'>
-              <label className='block text-[10px] font-bold uppercase tracking-[0.24em] text-slate-500 mb-2'>Filter by team</label>
+        {/* Controls Row */}
+        <div className='flex items-center justify-between gap-3 mb-6 flex-wrap'>
+          {/* Team filter */}
+          <div className='flex items-center gap-3'>
+            <p className='section-label'>FILTER</p>
+            <div className='relative'>
               <select
                 value={selectedTeam}
                 onChange={(e) => {
-                  const nextTeam = e.target.value;
-                  const nextUrl = nextTeam === 'ALL' ? '/matches' : `/matches?team=${nextTeam}`;
-                  router.replace(nextUrl, { scroll: false });
+                  const v = e.target.value;
+                  router.replace(v === 'ALL' ? '/matches' : `/matches?team=${v}`, { scroll: false });
                 }}
-                className='w-full rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-semibold text-white outline-none transition-colors focus:border-brand-400'
+                className='appearance-none pl-4 pr-10 py-2 text-sm font-semibold rounded'
+                style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none' }}
               >
-                <option value='ALL'>All teams</option>
-                {Object.entries(teamInfo).map(([key, team]) => (
-                  <option key={key} value={key}>{team.name}</option>
-                ))}
+                <option value='ALL'>All Teams</option>
+                {Object.entries(teamInfo).map(([key, t]) => <option key={key} value={key}>{t.name}</option>)}
               </select>
+              <ChevronDown size={14} className='absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none' style={{ color: '#8890A0' }} />
             </div>
           </div>
 
-          {featuredMatch && featuredTeamNames && (
-            <div className='mt-5 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]'>
-              <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                <div className='flex items-center justify-between gap-4 mb-4'>
-                  <div>
-                    <p className='text-xs font-bold uppercase tracking-[0.24em] text-slate-500'>Next fixture</p>
-                    <h3 className='text-lg font-black text-white'>Match {featuredMatch.matchNumber}</h3>
-                  </div>
-                  <span className='rounded-full border border-accent-500/20 bg-accent-500/10 px-3 py-1 text-xs font-black text-accent-400'>
-                    {selectedTeam === 'ALL' ? 'All teams' : teamInfo[selectedTeam as keyof typeof teamInfo].shortName}
-                  </span>
-                </div>
-
-                <div className='flex items-center justify-between gap-3'>
-                  <div className='flex min-w-0 flex-1 items-center gap-3'>
-                    <div className='h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-2'>
-                      <img src={teamInfo[featuredMatch.team1].logo} alt={featuredMatch.team1} className='h-full w-full object-contain' />
-                    </div>
-                    <div className='min-w-0'>
-                      <p className='text-sm font-bold text-white'>{featuredTeamNames[0]}</p>
-                      <p className='text-xs text-slate-500'>{featuredMatch.team1}</p>
-                    </div>
-                  </div>
-
-                  <div className='rounded-full border border-white/10 bg-slate-900/70 px-3 py-1 text-xs font-black italic text-slate-400'>VS</div>
-
-                  <div className='flex min-w-0 flex-1 items-center justify-end gap-3 text-right'>
-                    <div className='min-w-0'>
-                      <p className='text-sm font-bold text-white'>{featuredTeamNames[1]}</p>
-                      <p className='text-xs text-slate-500'>{featuredMatch.team2}</p>
-                    </div>
-                    <div className='h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 p-2'>
-                      <img src={teamInfo[featuredMatch.team2].logo} alt={featuredMatch.team2} className='h-full w-full object-contain' />
-                    </div>
-                  </div>
-                </div>
-
-                <div className='mt-4 flex flex-wrap gap-3 text-xs text-slate-400'>
-                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><Calendar className='h-3.5 w-3.5' /> {featuredMatch.date}</span>
-                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><MapPin className='h-3.5 w-3.5' /> {featuredMatch.venue}</span>
-                  <span className='inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1 font-semibold'><Users className='h-3.5 w-3.5' /> {featuredMatch.status === 'live' ? 'Live soon' : 'Upcoming'}</span>
-                </div>
-              </div>
-
-              <div className='rounded-2xl border border-white/10 bg-slate-950/60 p-4'>
-                <p className='text-xs font-bold uppercase tracking-[0.24em] text-slate-500'>Filtered list</p>
-                <div className='mt-2 text-3xl font-black text-white'>{filteredUpcomingMatches.length}</div>
-                <p className='mt-1 text-sm text-slate-400'>Upcoming matches for the selected view.</p>
-                {selectedTeam !== 'ALL' && (
-                  <Link
-                    href='/matches'
-                    className='mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10'
-                  >
-                    Clear filter <ChevronRight className='h-4 w-4' />
-                  </Link>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Tab Toggle */}
+          <div className='flex rounded overflow-hidden' style={{ border: '1px solid #1E2028' }}>
+            {(['all', 'upcoming', 'completed'] as TabType[]).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className='px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all'
+                style={{
+                  background: activeTab === tab ? '#D4AF37' : '#0D0F14',
+                  color: activeTab === tab ? '#0D0F14' : '#8890A0',
+                }}
+              >
+                {tab === 'all' ? `All (${completed.length + upcoming.length})` : tab === 'upcoming' ? `Upcoming (${upcoming.length})` : `Results (${completed.length})`}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Completed Matches */}
-          <div>
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 bg-brand-500/20 rounded-lg"><Trophy className="w-5 h-5 text-brand-400" /></div>
-              <h2 className='text-2xl font-bold text-white'>Recent Results</h2>
-            </div>
-            
-            <div className='space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar'>
-              {completedMatches.slice().reverse().map((match, idx) => {
-                const t1 = teamInfo[match.team1];
-                const t2 = teamInfo[match.team2];
-                return (
-                  <motion.div
-                    key={match.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: idx * 0.05 }}
-                    whileHover={{ scale: 1.02 }}
-                    className='glass-card rounded-3xl p-6 relative overflow-hidden group'
-                  >
-                    {/* Glowing background behind winner */}
-                    <div className={`absolute top-1/2 -translate-y-1/2 ${match.winner === match.team1 ? 'left-0' : 'right-0'} w-32 h-32 blur-[60px] opacity-20 pointer-events-none transition-all duration-500`} style={{ backgroundColor: match.winner === match.team1 ? t1.color : t2.color }}></div>
+        {/* ══════ NEXT MATCH SPOTLIGHT ══════ */}
+        {nextMatch && (activeTab === 'all' || activeTab === 'upcoming') && (() => {
+          const t1 = teamInfo[nextMatch.team1];
+          const t2 = teamInfo[nextMatch.team2];
+          const isToday = nextMatch.date === today;
+          const t1Prob = getHistoricalWinProbability(nextMatch.team1, nextMatch.team2);
+          const t2Prob = 100 - t1Prob;
+          const venueCity = getVenueCity(nextMatch.venue);
+          const venueColor = getVenueColor(nextMatch.venue);
 
-                    <div className='flex justify-between items-center mb-6'>
-                      <span className='text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center'>
-                        <Calendar className="w-3.5 h-3.5 mr-1.5" /> {match.date}
-                      </span>
-                      <span className='px-4 py-1.5 bg-brand-500/20 text-brand-400 rounded-full text-xs font-black shadow-[inset_0_0_10px_rgba(234,179,8,0.2)]'>Match {match.matchNumber}</span>
+          return (
+            <motion.div
+              initial={{ y: 16, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className={`match-card p-6 mb-8 ${isToday ? 'match-today' : ''}`}
+            >
+              <div className='flex items-center justify-between mb-5'>
+                <div className='flex items-center gap-3'>
+                  <p className='section-label'>NEXT MATCH SPOTLIGHT</p>
+                  {isToday && <span className='live-badge'><span className='live-dot' /> TODAY</span>}
+                </div>
+                <div className='flex items-center gap-2'>
+                  <span className='px-2 py-1 rounded text-xs font-semibold' style={{ background: `${venueColor}15`, color: venueColor, border: `1px solid ${venueColor}30` }}>
+                    {venueCity}
+                  </span>
+                  <span style={{ color: '#3D4356', fontSize: 11, fontWeight: 700 }}>M{nextMatch.matchNumber}</span>
+                </div>
+              </div>
+
+              <div className='flex items-center justify-between'>
+                {/* Team 1 Captain */}
+                <div className='flex flex-col items-center gap-2 flex-1'>
+                  <div className='w-20 h-20 rounded-full overflow-hidden border-2' style={{ borderColor: t1.color, background: '#0D0F14' }}>
+                    <img src={t1.captain?.image} alt={t1.captain?.name} className='w-full h-full object-cover'
+                      onError={(e) => { (e.target as HTMLImageElement).src = t1.captain?.fallbackImage || ''; }} />
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <div className='w-7 h-7 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
+                      <img src={t1.logo} alt={t1.shortName} className='w-full h-full object-contain' />
                     </div>
-                    
-                    <div className='flex items-center justify-between mb-6 relative z-10'>
-                      <div className="flex flex-col items-center w-1/3 relative">
-                        {match.winner === match.team1 && <Crown className="absolute -top-6 w-5 h-5 text-amber-400 animate-bounce" />}
-                        <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-120 overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 ${match.winner === match.team1 ? 'border-amber-400 shadow-[0_0_20px_rgba(251,146,60,0.3),0_4px_12px_rgba(0,0,0,0.4)]' : 'border-white/20 shadow-md opacity-75'}`}>
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
-                          <img
-                            src={t1.logo}
-                            alt={t1.shortName}
-                            className="w-11 h-11 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)] relative z-10"
-                            onError={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = t1.fallbackLogo || `https://ui-avatars.com/api/?name=${t1.shortName}&background=random&color=fff`;
-                            }}
-                          />
-                        </div>
-                        <span className={`mt-2 font-bold ${match.winner === match.team1 ? 'text-white' : 'text-slate-500'}`}>{t1.shortName}</span>
-                      </div>
-                      
-                      <div className="flex flex-col items-center w-1/3">
-                        <span className='text-slate-600 text-lg font-black italic'>VS</span>
-                      </div>
-                      
-                      <div className="flex flex-col items-center w-1/3 relative">
-                        {match.winner === match.team2 && <Crown className="absolute -top-6 w-5 h-5 text-amber-400 animate-bounce" />}
-                        <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-120 overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 ${match.winner === match.team2 ? 'border-amber-400 shadow-[0_0_20px_rgba(251,146,60,0.3),0_4px_12px_rgba(0,0,0,0.4)]' : 'border-white/20 shadow-md opacity-75'}`}>
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
-                          <img
-                            src={t2.logo}
-                            alt={t2.shortName}
-                            className="w-11 h-11 object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)] relative z-10"
-                            onError={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = t2.fallbackLogo || `https://ui-avatars.com/api/?name=${t2.shortName}&background=random&color=fff`;
-                            }}
-                          />
-                        </div>
-                        <span className={`mt-2 font-bold ${match.winner === match.team2 ? 'text-white' : 'text-slate-500'}`}>{t2.shortName}</span>
-                      </div>
+                    <span className='font-bold text-xl' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{t1.shortName}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#8890A0' }}>{t1.captain?.name}</span>
+                </div>
+
+                {/* VS + Probability */}
+                <div className='flex flex-col items-center gap-3 px-6'>
+                  <span className='text-3xl font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#1E2028' }}>VS</span>
+                  <div className='flex items-center gap-1' style={{ fontSize: 11, color: '#3D4356' }}>
+                    <Calendar size={11} /> {formatDate(nextMatch.date)}
+                  </div>
+                </div>
+
+                {/* Team 2 Captain */}
+                <div className='flex flex-col items-center gap-2 flex-1'>
+                  <div className='w-20 h-20 rounded-full overflow-hidden border-2' style={{ borderColor: t2.color, background: '#0D0F14' }}>
+                    <img src={t2.captain?.image} alt={t2.captain?.name} className='w-full h-full object-cover'
+                      onError={(e) => { (e.target as HTMLImageElement).src = t2.captain?.fallbackImage || ''; }} />
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <span className='font-bold text-xl' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{t2.shortName}</span>
+                    <div className='w-7 h-7 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
+                      <img src={t2.logo} alt={t2.shortName} className='w-full h-full object-contain' />
                     </div>
-                    
-                    <div className='text-center py-3 px-4 bg-gradient-to-r from-brand-500/10 via-brand-500/20 to-brand-500/10 rounded-xl border border-brand-500/20'>
-                      <span className='text-sm text-brand-400 font-bold'>
-                        {match.winner} won by {match.margin} {match.marginType}
-                      </span>
+                  </div>
+                  <span style={{ fontSize: 11, color: '#8890A0' }}>{t2.captain?.name}</span>
+                </div>
+              </div>
+
+              {/* H2H Bar */}
+              <div className='mt-5 pt-4' style={{ borderTop: '1px solid #1E2028' }}>
+                <div className='flex justify-between mb-1'>
+                  <span style={{ fontSize: 12, color: '#E8E8E8', fontWeight: 700 }}>{t1Prob}%</span>
+                  <span className='section-label'>ALL-TIME H2H WIN RATE</span>
+                  <span style={{ fontSize: 12, color: '#E8E8E8', fontWeight: 700 }}>{t2Prob}%</span>
+                </div>
+                <div className='tug-bar' style={{ height: 8 }}>
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${t1Prob}%` }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                    style={{ background: t1.color, borderRadius: '4px 0 0 4px' }} />
+                  <motion.div initial={{ width: 0 }} animate={{ width: `${t2Prob}%` }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                    style={{ background: t2.color, borderRadius: '0 4px 4px 0' }} />
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
+        {/* ══════ SPLIT LAYOUT ══════ */}
+        {activeTab === 'all' ? (() => {
+          // Limit to 5 matches each in split view
+          const previewUpcoming = upcomingWithoutSpotlight.slice(0, 5);
+          const previewCompleted = completed.slice(0, 5);
+          const previewUpcomingGroups = groupByDate(previewUpcoming);
+          const previewCompletedGroups = groupByDate(previewCompleted);
+
+          return (
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+            {/* LEFT: Upcoming */}
+            <div>
+              <p className='section-label mb-3'>UPCOMING — {upcomingWithoutSpotlight.length} MORE</p>
+              <div className='space-y-1'>
+                {Object.entries(previewUpcomingGroups).map(([date, group]) => (
+                  <div key={`g-${date}`}>
+                    <div className='py-2 px-3 mb-1 rounded' style={{ borderBottom: '1px solid #1E2028' }}>
+                      <span className='text-xs font-bold' style={{ color: '#D4AF37', letterSpacing: '0.08em' }}>{formatDate(date)}</span>
                     </div>
-                  </motion.div>
-                );
-              })}
+                    <div className={group.length > 1 ? 'grid grid-cols-2 gap-2' : ''}>
+                      {group.map((m, idx) => <UpcomingCard key={m.id} match={m} idx={idx} today={today} pointsTable={pointsTable || []} completedMatches={allCompleted} />)}
+                    </div>
+                  </div>
+                ))}
+                {upcomingWithoutSpotlight.length === 0 && <EmptyState text="No more upcoming matches." />}
+              </div>
+              {upcomingWithoutSpotlight.length > 5 && (
+                <button onClick={() => setActiveTab('upcoming')}
+                  className='w-full mt-3 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all hover:brightness-125'
+                  style={{ background: 'rgba(212,175,55,0.06)', color: '#D4AF37', border: '1px solid rgba(212,175,55,0.15)' }}>
+                  VIEW ALL {upcomingWithoutSpotlight.length} UPCOMING →
+                </button>
+              )}
+            </div>
+
+            {/* RIGHT: Completed */}
+            <div>
+              <p className='section-label mb-3'>RESULTS — {completed.length} MATCHES</p>
+              <div className='space-y-1'>
+                {Object.entries(previewCompletedGroups).map(([date, group]) => (
+                  <div key={date}>
+                    <div className='py-2 px-3 mb-1 rounded' style={{ borderBottom: '1px solid #1E2028' }}>
+                      <span className='text-xs font-bold' style={{ color: '#8890A0', letterSpacing: '0.08em' }}>{formatDate(date)}</span>
+                    </div>
+                    {group.map((m, idx) => <CompletedRow key={m.id} match={m} allCompleted={allCompleted} idx={idx} />)}
+                  </div>
+                ))}
+                {completed.length === 0 && <EmptyState text="No completed matches." />}
+              </div>
+              {completed.length > 5 && (
+                <button onClick={() => setActiveTab('completed')}
+                  className='w-full mt-3 py-2.5 rounded-lg text-xs font-bold tracking-wider transition-all hover:brightness-125'
+                  style={{ background: 'rgba(136,144,160,0.06)', color: '#8890A0', border: '1px solid rgba(136,144,160,0.15)' }}>
+                  VIEW ALL {completed.length} RESULTS →
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Upcoming Matches */}
+          );
+        })() : activeTab === 'upcoming' ? (
           <div>
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="p-2 bg-accent-500/20 rounded-lg"><Clock className="w-5 h-5 text-accent-400" /></div>
-              <h2 className='text-2xl font-bold text-white'>
-                {selectedTeam === 'ALL' ? 'Upcoming Fixtures' : `${teamInfo[selectedTeam as keyof typeof teamInfo].shortName} Upcoming Fixtures`}
-              </h2>
-            </div>
-            
-            <div className='space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar'>
-              {filteredUpcomingMatches.length > 0 ? filteredUpcomingMatches.map((match, idx) => {
-                const t1 = teamInfo[match.team1];
-                const t2 = teamInfo[match.team2];
-                const t1Prob = getHistoricalWinProbability(match.team1, match.team2);
-                const t2Prob = 100 - t1Prob;
-
-                return (
-                  <motion.div
-                    key={match.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: idx * 0.05 }}
-                    whileHover={{ scale: 1.02 }}
-                    className='glass-card rounded-3xl p-6 relative overflow-hidden group cursor-pointer'
-                  >
-                    <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-accent-500/5 blur-[50px] rounded-full pointer-events-none group-hover:bg-accent-500/10 transition-colors duration-500'></div>
-
-                    <div className='flex justify-between items-center mb-6 relative z-10'>
-                      <span className='text-xs font-bold text-slate-400 tracking-wider uppercase flex items-center'>
-                        <Calendar className="w-3.5 h-3.5 mr-1.5" /> {match.date}
-                      </span>
-                      <span className='px-4 py-1.5 bg-accent-500/20 text-accent-400 rounded-full text-xs font-black shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]'>Match {match.matchNumber}</span>
-                    </div>
-                    
-                    <div className='flex items-center justify-between relative z-10 mb-6'>
-                      <div className="flex flex-col items-center w-1/3 space-y-3">
-                        <div className="w-20 h-20 rounded-full border-4 border-white/20 flex items-center justify-center shadow-xl group-hover:scale-125 transition-all duration-300 overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 group-hover:shadow-[0_0_25px_rgba(255,255,255,0.15)]">
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
-                          <img
-                            src={t1.logo}
-                            alt={t1.shortName}
-                            className="w-13 h-13 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)] relative z-10"
-                            onError={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = t1.fallbackLogo || `https://ui-avatars.com/api/?name=${t1.shortName}&background=random&color=fff`;
-                            }}
-                          />
-                        </div>
-                        <span className="text-white font-bold tracking-wide">{t1.shortName}</span>
-                      </div>
-                      
-                      <div className="flex flex-col items-center w-1/3">
-                        <span className='text-slate-600 font-black text-lg italic mb-2'>VS</span>
-                        <div className="flex items-center text-[10px] text-slate-400 font-semibold uppercase tracking-widest text-center px-2 py-1 bg-white/5 rounded-full">
-                          <MapPin className="w-3 h-3 mr-1" /> {match.venue.split(',')[0]}
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-center w-1/3 space-y-3">
-                        <div className="w-20 h-20 rounded-full border-4 border-white/20 flex items-center justify-center shadow-xl group-hover:scale-125 transition-all duration-300 overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 group-hover:shadow-[0_0_25px_rgba(255,255,255,0.15)]">
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 via-transparent to-transparent pointer-events-none" />
-                          <img
-                            src={t2.logo}
-                            alt={t2.shortName}
-                            className="w-13 h-13 object-contain drop-shadow-[0_3px_8px_rgba(0,0,0,0.4)] relative z-10"
-                            onError={(e) => {
-                              const img = e.currentTarget as HTMLImageElement;
-                              img.onerror = null;
-                              img.src = t2.fallbackLogo || `https://ui-avatars.com/api/?name=${t2.shortName}&background=random&color=fff`;
-                            }}
-                          />
-                        </div>
-                        <span className="text-white font-bold tracking-wide">{t2.shortName}</span>
-                      </div>
-                    </div>
-
-                    {/* Historical H2H Probability Bar */}
-                    <div className="relative z-10 mt-4 pt-4 border-t border-white/5">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-bold text-slate-400 flex items-center uppercase tracking-widest"><History className="w-3 h-3 mr-1" /> All-Time H2H Probability</span>
-                      </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-black text-white" style={{ textShadow: `0 0 10px ${t1.color}` }}>{t1Prob}%</span>
-                        <span className="text-sm font-black text-white" style={{ textShadow: `0 0 10px ${t2.color}` }}>{t2Prob}%</span>
-                      </div>
-                      <div className="h-2.5 w-full bg-slate-900/50 rounded-full flex gap-1 p-0.5">
-                        <div className="h-full rounded-full transition-all duration-1000 shadow-lg" style={{ width: `${t1Prob}%`, backgroundColor: t1.color, boxShadow: `0 0 15px ${t1.color}80` }}></div>
-                        <div className="h-full rounded-full transition-all duration-1000 shadow-lg" style={{ width: `${t2Prob}%`, backgroundColor: t2.color, boxShadow: `0 0 15px ${t2.color}80` }}></div>
-                      </div>
-                    </div>
-
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0 duration-300">
-                      <ChevronRight className="w-6 h-6 text-accent-400" />
-                    </div>
-                  </motion.div>
-                );
-              }) : (
-                <div className='rounded-3xl border border-white/10 bg-white/5 p-6 text-center text-sm text-slate-400'>
-                  No upcoming matches found for the selected team.
+            <p className='section-label mb-3'>UPCOMING — {upcomingWithoutSpotlight.length} MORE</p>
+            <div className='space-y-1'>
+              {Object.entries(upcomingGroups).map(([date, group]) => (
+                <div key={`ug-${date}`}>
+                  <div className='py-2 px-3 mb-1 rounded' style={{ borderBottom: '1px solid #1E2028' }}>
+                    <span className='text-xs font-bold' style={{ color: '#D4AF37', letterSpacing: '0.08em' }}>{formatDate(date)}</span>
+                  </div>
+                  <div className={group.length > 1 ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : ''}>
+                    {group.map((m, idx) => <UpcomingCard key={m.id} match={m} idx={idx} today={today} pointsTable={pointsTable || []} completedMatches={allCompleted} />)}
+                  </div>
                 </div>
-              )}
+              ))}
+              {upcomingWithoutSpotlight.length === 0 && <EmptyState text="No more upcoming matches." />}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className='section-label mb-3'>RESULTS — {completed.length} MATCHES</p>
+            <div className='space-y-1'>
+              {Object.entries(completedGroups).map(([date, group]) => (
+                <div key={date}>
+                  <div className='py-2 px-3 mb-1 rounded' style={{ background: '#0D0F14', borderBottom: '1px solid #1E2028' }}>
+                    <span className='text-xs font-bold' style={{ color: '#8890A0', letterSpacing: '0.08em' }}>{formatDate(date)}</span>
+                  </div>
+                  {group.map((m, idx) => <CompletedRow key={m.id} match={m} allCompleted={allCompleted} idx={idx} />)}
+                </div>
+              ))}
+              {completed.length === 0 && <EmptyState text="No completed matches." />}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── UPCOMING CARD ───
+function UpcomingCard({ match: m, idx, today, pointsTable, completedMatches }: {
+  match: any; idx: number; today: string; pointsTable: any[]; completedMatches: any[];
+}) {
+  const t1 = teamInfo[m.team1];
+  const t2 = teamInfo[m.team2];
+  const isToday = m.date === today;
+  const t1Prob = getHistoricalWinProbability(m.team1, m.team2);
+  const t2Prob = 100 - t1Prob;
+  const venueCity = getVenueCity(m.venue);
+  const venueColor = getVenueColor(m.venue);
+
+  // Team standings
+  const t1Entry = pointsTable.find((e: any) => e.team === m.team1);
+  const t2Entry = pointsTable.find((e: any) => e.team === m.team2);
+  const t1Rank = pointsTable.findIndex((e: any) => e.team === m.team1) + 1;
+  const t2Rank = pointsTable.findIndex((e: any) => e.team === m.team2) + 1;
+
+  // Form guide (last 5 results)
+  const getForm = (team: string) => {
+    return completedMatches
+      .filter((cm: any) => cm.team1 === team || cm.team2 === team)
+      .slice(-5)
+      .map((cm: any) => cm.winner === team ? 'W' : cm.winner ? 'L' : 'NR');
+  };
+  const t1Form = getForm(m.team1);
+  const t2Form = getForm(m.team2);
+
+  return (
+    <motion.div
+      initial={{ y: 8, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: idx * 0.03 }}
+      className={`match-card p-4 mb-2 ${isToday ? 'match-today' : ''}`}
+    >
+      {/* Top bar: match info + venue */}
+      <div className='flex items-center justify-between mb-3'>
+        <div className='flex items-center gap-2'>
+          {isToday && <span className='live-badge' style={{ fontSize: 9, padding: '2px 6px' }}><span className='live-dot' /> TODAY</span>}
+          <span style={{ color: '#3D4356', fontSize: 10, fontWeight: 700 }}>M{m.matchNumber}</span>
+          <span style={{ color: '#3D4356', fontSize: 9 }}>•</span>
+          <span style={{ color: '#3D4356', fontSize: 9 }}>{formatDate(m.date)}</span>
+        </div>
+        <span className='px-2 py-0.5 rounded text-xs' style={{ background: `${venueColor}12`, color: venueColor, fontSize: 9, fontWeight: 600, border: `1px solid ${venueColor}25` }}>
+          {venueCity}
+        </span>
+      </div>
+
+      {/* Main matchup */}
+      <div className='flex items-stretch justify-between gap-2'>
+        {/* Team 1 */}
+        <div className='flex-1 flex flex-col items-center gap-1'>
+          <div className='w-10 h-10 rounded-full overflow-hidden border-2' style={{ borderColor: t1.color, background: '#0D0F14' }}>
+            <img src={t1.captain?.image} alt={t1.captain?.name} className='w-full h-full object-cover'
+              onError={(e) => { (e.target as HTMLImageElement).src = t1.captain?.fallbackImage || ''; }} />
+          </div>
+          <div className='flex items-center gap-1'>
+            <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
+              <img src={t1.logo} alt={t1.shortName} className='w-full h-full object-contain' />
+            </div>
+            <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{t1.shortName}</span>
+          </div>
+          {/* Rank + Record */}
+          <div className='flex items-center gap-1'>
+            <span style={{ fontSize: 9, color: '#D4AF37', fontWeight: 700 }}>#{t1Rank}</span>
+            {t1Entry && <span style={{ fontSize: 9, color: '#3D4356' }}>{t1Entry.wins}W-{t1Entry.losses}L</span>}
+          </div>
+          {/* Form dots */}
+          <div className='flex gap-1'>
+            {t1Form.map((r: string, i: number) => (
+              <div key={i} className='w-2 h-2 rounded-full' style={{
+                background: r === 'W' ? '#1D9E75' : r === 'L' ? '#E8003D' : '#3D4356'
+              }} />
+            ))}
+          </div>
+        </div>
+
+        {/* VS */}
+        <div className='flex flex-col items-center justify-center px-2'>
+          <span className='text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#1E2028' }}>VS</span>
+        </div>
+
+        {/* Team 2 */}
+        <div className='flex-1 flex flex-col items-center gap-1'>
+          <div className='w-10 h-10 rounded-full overflow-hidden border-2' style={{ borderColor: t2.color, background: '#0D0F14' }}>
+            <img src={t2.captain?.image} alt={t2.captain?.name} className='w-full h-full object-cover'
+              onError={(e) => { (e.target as HTMLImageElement).src = t2.captain?.fallbackImage || ''; }} />
+          </div>
+          <div className='flex items-center gap-1'>
+            <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{t2.shortName}</span>
+            <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
+              <img src={t2.logo} alt={t2.shortName} className='w-full h-full object-contain' />
+            </div>
+          </div>
+          {/* Rank + Record */}
+          <div className='flex items-center gap-1'>
+            <span style={{ fontSize: 9, color: '#D4AF37', fontWeight: 700 }}>#{t2Rank}</span>
+            {t2Entry && <span style={{ fontSize: 9, color: '#3D4356' }}>{t2Entry.wins}W-{t2Entry.losses}L</span>}
+          </div>
+          {/* Form dots */}
+          <div className='flex gap-1'>
+            {t2Form.map((r: string, i: number) => (
+              <div key={i} className='w-2 h-2 rounded-full' style={{
+                background: r === 'W' ? '#1D9E75' : r === 'L' ? '#E8003D' : '#3D4356'
+              }} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* H2H Bar */}
+      <div className='mt-3 pt-2' style={{ borderTop: '1px solid #1E2028' }}>
+        <div className='flex justify-between mb-1'>
+          <span style={{ fontSize: 9, color: '#8890A0' }}>{t1Prob}%</span>
+          <span style={{ fontSize: 8, color: '#3D4356', letterSpacing: '0.1em', textTransform: 'uppercase' }}>H2H WIN RATE</span>
+          <span style={{ fontSize: 9, color: '#8890A0' }}>{t2Prob}%</span>
+        </div>
+        <div className='tug-bar' style={{ height: 4 }}>
+          <motion.div initial={{ width: 0 }} animate={{ width: `${t1Prob}%` }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            style={{ background: t1.color, borderRadius: '3px 0 0 3px' }} />
+          <motion.div initial={{ width: 0 }} animate={{ width: `${t2Prob}%` }} transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+            style={{ background: t2.color, borderRadius: '0 3px 3px 0' }} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── COMPLETED SCORECARD ───
+function CompletedRow({ match: m, allCompleted, idx }: { match: any; allCompleted: any[]; idx: number }) {
+  const t1 = teamInfo[m.team1];
+  const t2 = teamInfo[m.team2];
+  const isT1Win = m.winner === m.team1;
+  const isT2Win = m.winner === m.team2;
+  const noResult = !m.winner;
+  const winnerTeam = m.winner ? teamInfo[m.winner] : null;
+
+  // Win streak badge
+  const winnerStreak = m.winner ? getWinStreak(m.winner, allCompleted) : 0;
+  const venueCity = getVenueCity(m.venue);
+  const venueColor = getVenueColor(m.venue);
+
+  const StreakBadge = winnerStreak >= 3 ? (
+    <span className='flex items-center gap-0.5 px-1.5 py-0.5 rounded' style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)' }}>
+      <Flame size={9} style={{ color: '#D4AF37' }} />
+      <span style={{ fontSize: 8, color: '#D4AF37', fontWeight: 700 }}>{winnerStreak}W</span>
+    </span>
+  ) : null;
+
+  return (
+    <motion.div
+      initial={{ y: 4, opacity: 0 }}
+      whileInView={{ y: 0, opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ delay: Math.min(idx * 0.015, 0.2) }}
+      className='match-card p-4 mb-2'
+      style={{ borderLeft: winnerTeam ? `3px solid ${winnerTeam.color}` : '3px solid #3D4356' }}
+    >
+      {/* Matchup Row */}
+      <div className='flex items-center justify-between gap-2'>
+        {/* Team 1 */}
+        <div className='flex items-center gap-2 flex-1'>
+          <div className='relative'>
+            <div className='w-9 h-9 rounded-full overflow-hidden border' style={{
+              borderColor: isT1Win ? '#D4AF37' : '#1E2028',
+              background: '#0D0F14',
+              opacity: isT2Win ? 0.4 : 1,
+            }}>
+              <img src={t1.captain?.image} alt={t1.captain?.name} className='w-full h-full object-cover'
+                onError={(e) => { (e.target as HTMLImageElement).src = t1.captain?.fallbackImage || ''; }} />
+            </div>
+          </div>
+          <div className='flex flex-col'>
+            {isT1Win && StreakBadge}
+            <div className='flex items-center gap-1'>
+              <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1, opacity: isT2Win ? 0.4 : 1 }}>
+                <img src={t1.logo} alt={m.team1} className='w-full h-full object-contain' />
+              </div>
+              <span className='font-bold' style={{
+                fontFamily: 'var(--font-barlow)', fontSize: 14,
+                color: isT1Win ? '#D4AF37' : isT2Win ? '#3D4356' : '#8890A0'
+              }}>{m.team1}</span>
+              {isT1Win && <span style={{ fontSize: 9, color: '#1D9E75' }}>✓</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Center: Match Info + Result */}
+        <div className='flex flex-col items-center px-3 shrink-0'>
+          <span style={{ color: '#3D4356', fontSize: 9, fontWeight: 700 }}>M{m.matchNumber}</span>
+          {noResult ? (
+            <span className='px-2 py-0.5 rounded text-xs font-bold mt-1' style={{ background: 'rgba(136,144,160,0.08)', color: '#8890A0' }}>NO RESULT</span>
+          ) : (
+            <span className='text-xs font-bold mt-0.5' style={{ color: '#1D9E75' }}>
+              +{m.margin} {m.marginType === 'runs' ? 'RUNS' : 'WKTS'}
+            </span>
+          )}
+          <span className='px-1.5 py-0.5 rounded mt-0.5' style={{ fontSize: 7, background: `${venueColor}10`, color: venueColor, fontWeight: 600 }}>
+            {venueCity}
+          </span>
+        </div>
+
+        {/* Team 2 */}
+        <div className='flex items-center gap-2 flex-1 justify-end'>
+          <div className='flex flex-col items-end'>
+            {isT2Win && StreakBadge}
+            <div className='flex items-center gap-1'>
+              {isT2Win && <span style={{ fontSize: 9, color: '#1D9E75' }}>✓</span>}
+              <span className='font-bold' style={{
+                fontFamily: 'var(--font-barlow)', fontSize: 14,
+                color: isT2Win ? '#D4AF37' : isT1Win ? '#3D4356' : '#8890A0'
+              }}>{m.team2}</span>
+              <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1, opacity: isT1Win ? 0.4 : 1 }}>
+                <img src={t2.logo} alt={m.team2} className='w-full h-full object-contain' />
+              </div>
+            </div>
+          </div>
+          <div className='relative'>
+            <div className='w-9 h-9 rounded-full overflow-hidden border' style={{
+              borderColor: isT2Win ? '#D4AF37' : '#1E2028',
+              background: '#0D0F14',
+              opacity: isT1Win ? 0.4 : 1,
+            }}>
+              <img src={t2.captain?.image} alt={t2.captain?.name} className='w-full h-full object-cover'
+                onError={(e) => { (e.target as HTMLImageElement).src = t2.captain?.fallbackImage || ''; }} />
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className='surface-card p-6 text-center' style={{ color: '#3D4356', fontSize: 13 }}>{text}</div>
   );
 }

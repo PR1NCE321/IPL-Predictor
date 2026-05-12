@@ -1,60 +1,38 @@
 'use client';
 
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
 import { teamInfo } from '@/data/mockData';
-import { Sliders, Play, Calendar, Activity, TrendingUp, TrendingDown, RefreshCcw, CheckCircle2, Zap, Save, Download, Target, Crown, Medal, Sparkles, Gauge } from 'lucide-react';
+import { Play, Calendar, TrendingUp, TrendingDown, RefreshCcw, Zap, Save, Download, Target, Sparkles } from 'lucide-react';
 import { Match, PointsTableEntry } from '@/types';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
-import { TeamLogoBadge } from '@/components/common/TeamLogoBadge';
 import { estimateWinProbability, estimateMargin, pickWeightedWinner } from '@/services/probability';
 
 type MarginType = 'runs' | 'wickets';
-
 interface SimulatedMatch {
-  matchId: number;
-  mode: 'quick' | 'deep';
-  winner: string;
-  marginType?: MarginType;
-  marginValue?: number;
-  t1Runs?: number;
-  t1Overs?: number;
-  t2Runs?: number;
-  t2Overs?: number;
+  matchId: number; mode: 'quick' | 'deep'; winner: string;
+  marginType?: MarginType; marginValue?: number;
+  t1Runs?: number; t1Overs?: number; t2Runs?: number; t2Overs?: number;
 }
 
 export default function SimulatorPage() {
-  const { matches, pointsTable: baseTable, loading, error } = useLiveSystemData();
-  const liveMatches = matches?.filter((match) => match.status === 'pending') ?? null;
+  const { matches, pointsTable: baseTable, loading } = useLiveSystemData();
+  const liveMatches = matches?.filter((m) => m.status === 'pending') ?? null;
 
   const [selectedMatch, setSelectedMatch] = useState<number | null>(null);
   const [simulatedMatches, setSimulatedMatches] = useState<Record<number, SimulatedMatch>>({});
-  
-  // New State
   const [targetTeam, setTargetTeam] = useState<string>('NONE');
   const [hasSavedScenario, setHasSavedScenario] = useState(false);
   const [simMode, setSimMode] = useState<'quick' | 'deep'>('quick');
-
-  // Quick Form state
   const [selectedWinner, setSelectedWinner] = useState<string | null>(null);
   const [marginType, setMarginType] = useState<MarginType>('runs');
   const [marginValue, setMarginValue] = useState<string>('');
-
-  // Deep Form state
-  const [t1Runs, setT1Runs] = useState<string>('');
-  const [t1Overs, setT1Overs] = useState<string>('20');
-  const [t2Runs, setT2Runs] = useState<string>('');
-  const [t2Overs, setT2Overs] = useState<string>('20');
+  const [t1Runs, setT1Runs] = useState(''); const [t1Overs, setT1Overs] = useState('20');
+  const [t2Runs, setT2Runs] = useState(''); const [t2Overs, setT2Overs] = useState('20');
 
   const currentMatch = (selectedMatch !== null && liveMatches) ? liveMatches[selectedMatch] : null;
-  const selectedMatchProbabilities = useMemo(() => {
-    if (!currentMatch) return null;
-    return estimateWinProbability(currentMatch, baseTable || []);
-  }, [currentMatch, baseTable]);
 
   useEffect(() => {
-    // Check if there's a saved scenario on mount
     const saved = localStorage.getItem('ipl_simulator_scenario_v1');
     if (saved) setHasSavedScenario(true);
   }, []);
@@ -65,607 +43,379 @@ export default function SimulatorPage() {
     const match = liveMatches[idx];
     if (simulatedMatches[match.id]) {
       const sim = simulatedMatches[match.id];
-      setSelectedWinner(sim.winner);
-      setSimMode(sim.mode);
-      if (sim.mode === 'quick') {
-        setMarginType(sim.marginType || 'runs');
-        setMarginValue(sim.marginValue?.toString() || '');
-      } else {
-        setT1Runs(sim.t1Runs?.toString() || '');
-        setT1Overs(sim.t1Overs?.toString() || '20');
-        setT2Runs(sim.t2Runs?.toString() || '');
-        setT2Overs(sim.t2Overs?.toString() || '20');
-      }
-    } else {
-      setSelectedWinner(null);
-      setMarginType('runs');
-      setMarginValue('');
-      setT1Runs('');
-      setT2Runs('');
-      setT1Overs('20');
-      setT2Overs('20');
-    }
+      setSelectedWinner(sim.winner); setSimMode(sim.mode);
+      if (sim.mode === 'quick') { setMarginType(sim.marginType || 'runs'); setMarginValue(sim.marginValue?.toString() || ''); }
+      else { setT1Runs(sim.t1Runs?.toString() || ''); setT1Overs(sim.t1Overs?.toString() || '20'); setT2Runs(sim.t2Runs?.toString() || ''); setT2Overs(sim.t2Overs?.toString() || '20'); }
+    } else { setSelectedWinner(null); setMarginType('runs'); setMarginValue(''); setT1Runs(''); setT2Runs(''); setT1Overs('20'); setT2Overs('20'); }
   };
 
   const applySimulation = (winner: string, mType: MarginType, mValue: number) => {
     if (!currentMatch) return;
-    setSimulatedMatches(prev => ({
-      ...prev,
-      [currentMatch.id]: {
-        matchId: currentMatch.id,
-        mode: 'quick',
-        winner: winner,
-        marginType: mType,
-        marginValue: mValue,
-      }
-    }));
-    
+    setSimulatedMatches(prev => ({ ...prev, [currentMatch.id]: { matchId: currentMatch.id, mode: 'quick', winner, marginType: mType, marginValue: mValue } }));
     const nextIdx = liveMatches!.findIndex(m => m.id !== currentMatch.id && !simulatedMatches[m.id]);
-    if (nextIdx !== -1) handleSelectMatch(nextIdx);
-    else setSelectedMatch(null);
+    if (nextIdx !== -1) handleSelectMatch(nextIdx); else setSelectedMatch(null);
   };
 
   const saveSimulation = () => {
     if (!currentMatch) return;
-    
-    if (simMode === 'quick' && selectedWinner && marginValue) {
-      applySimulation(selectedWinner, marginType, parseInt(marginValue) || 0);
-    } else if (simMode === 'deep' && selectedWinner && t1Runs && t2Runs && t1Overs && t2Overs) {
-      setSimulatedMatches(prev => ({
-        ...prev,
-        [currentMatch.id]: {
-          matchId: currentMatch.id,
-          mode: 'deep',
-          winner: selectedWinner,
-          t1Runs: parseInt(t1Runs),
-          t1Overs: parseFloat(t1Overs),
-          t2Runs: parseInt(t2Runs),
-          t2Overs: parseFloat(t2Overs)
-        }
-      }));
+    if (simMode === 'quick' && selectedWinner && marginValue) { applySimulation(selectedWinner, marginType, parseInt(marginValue) || 0); }
+    else if (simMode === 'deep' && selectedWinner && t1Runs && t2Runs) {
+      setSimulatedMatches(prev => ({ ...prev, [currentMatch.id]: { matchId: currentMatch.id, mode: 'deep', winner: selectedWinner, t1Runs: parseInt(t1Runs), t1Overs: parseFloat(t1Overs), t2Runs: parseInt(t2Runs), t2Overs: parseFloat(t2Overs) } }));
       const nextIdx = liveMatches!.findIndex(m => m.id !== currentMatch.id && !simulatedMatches[m.id]);
-      if (nextIdx !== -1) handleSelectMatch(nextIdx);
-      else setSelectedMatch(null);
+      if (nextIdx !== -1) handleSelectMatch(nextIdx); else setSelectedMatch(null);
     }
   };
 
-  const clearSimulations = () => {
-    setSimulatedMatches({});
-    setSelectedMatch(null);
-  };
-
-  // Feature 1: Auto-Simulate Season
   const autoSimulateAll = () => {
     if (!liveMatches) return;
     const newSims: Record<number, SimulatedMatch> = { ...simulatedMatches };
-    
     liveMatches.forEach(match => {
       if (!newSims[match.id]) {
         const winner = pickWeightedWinner(match, baseTable || []);
         const margin = estimateMargin(match, winner);
-        
-        newSims[match.id] = {
-          matchId: match.id,
-          mode: 'quick',
-          winner,
-          marginType: margin.marginType,
-          marginValue: margin.marginValue
-        };
+        newSims[match.id] = { matchId: match.id, mode: 'quick', winner, marginType: margin.marginType, marginValue: margin.marginValue };
       }
     });
-    setSimulatedMatches(newSims);
-    setSelectedMatch(null);
+    setSimulatedMatches(newSims); setSelectedMatch(null);
   };
 
   const smartSimulateCurrent = () => {
     if (!currentMatch) return;
     const winner = pickWeightedWinner(currentMatch, baseTable || []);
     const margin = estimateMargin(currentMatch, winner);
-    setSelectedWinner(winner);
-    setSimMode('quick');
-    setMarginType(margin.marginType);
-    setMarginValue(String(margin.marginValue));
+    setSelectedWinner(winner); setSimMode('quick'); setMarginType(margin.marginType); setMarginValue(String(margin.marginValue));
     applySimulation(winner, margin.marginType, margin.marginValue);
-  };
-
-  // Feature 2: Save / Load Scenarios
-  const saveScenarioToStorage = () => {
-    localStorage.setItem('ipl_simulator_scenario_v1', JSON.stringify(simulatedMatches));
-    setHasSavedScenario(true);
-    alert('Scenario Saved Successfully!');
-  };
-
-  const loadScenarioFromStorage = () => {
-    const saved = localStorage.getItem('ipl_simulator_scenario_v1');
-    if (saved) {
-      setSimulatedMatches(JSON.parse(saved));
-      setSelectedMatch(null);
-    }
   };
 
   const computedTable = useMemo(() => {
     if (!baseTable || !liveMatches) return [];
     const tableMap: Record<string, PointsTableEntry> = {};
-    
     baseTable.forEach(entry => { tableMap[entry.team] = { ...entry }; });
-
     Object.values(simulatedMatches).forEach(sim => {
       const match = liveMatches.find(m => m.id === sim.matchId);
       if (!match) return;
-
       const loser = match.team1 === sim.winner ? match.team2 : match.team1;
-      const winnerEntry = tableMap[sim.winner];
-      const loserEntry = tableMap[loser];
-
+      const we = tableMap[sim.winner]; const le = tableMap[loser];
       if (sim.mode === 'quick') {
-        const matchNrrDiff = sim.marginType === 'runs' ? (sim.marginValue || 0) / 20 : (sim.marginValue || 0) * 0.35;
-
-        if (winnerEntry) {
-          const oldTotalNrr = winnerEntry.nrr * winnerEntry.matches;
-          winnerEntry.matches += 1;
-          winnerEntry.wins += 1;
-          winnerEntry.points += 2;
-          winnerEntry.nrr = (oldTotalNrr + matchNrrDiff) / winnerEntry.matches;
-          winnerEntry.qualificationChance = Math.min(100, winnerEntry.qualificationChance + 8);
-        }
-
-        if (loserEntry) {
-          const oldTotalNrr = loserEntry.nrr * loserEntry.matches;
-          loserEntry.matches += 1;
-          loserEntry.losses += 1;
-          loserEntry.nrr = (oldTotalNrr - matchNrrDiff) / loserEntry.matches;
-          loserEntry.qualificationChance = Math.max(0, loserEntry.qualificationChance - 8);
-        }
+        const d = sim.marginType === 'runs' ? (sim.marginValue || 0) / 20 : (sim.marginValue || 0) * 0.35;
+        if (we) { const o = we.nrr * we.matches; we.matches += 1; we.wins += 1; we.points += 2; we.nrr = (o + d) / we.matches; }
+        if (le) { const o = le.nrr * le.matches; le.matches += 1; le.losses += 1; le.nrr = (o - d) / le.matches; }
       } else {
-        // True NRR Calculation via Reverse Engineering historicals
-        const t1Runs = sim.t1Runs || 0;
-        const t1Overs = sim.t1Overs || 20;
-        const t2Runs = sim.t2Runs || 0;
-        const t2Overs = sim.t2Overs || 20;
-        
-        // Figure out which entry is team1 vs team2
-        const isT1Winner = sim.winner === match.team1;
-        const e1 = tableMap[match.team1];
-        const e2 = tableMap[match.team2];
-
-        if (e1) {
-          // Approximate historicals for True NRR Bridge
-          const oldOvers = e1.matches * 20;
-          const oldRuns = 160 * e1.matches; 
-          const oldRunsConceded = oldOvers * ((oldRuns / oldOvers) - e1.nrr);
-          
-          const newRuns = oldRuns + t1Runs;
-          const newOvers = oldOvers + t1Overs;
-          const newRunsConceded = oldRunsConceded + t2Runs;
-          const newOversBowled = oldOvers + t2Overs;
-          
-          e1.nrr = (newRuns / newOvers) - (newRunsConceded / newOversBowled);
-          e1.matches += 1;
-          if (isT1Winner) { e1.wins += 1; e1.points += 2; e1.qualificationChance += 8; }
-          else { e1.losses += 1; e1.qualificationChance -= 8; }
-        }
-
-        if (e2) {
-          const oldOvers = e2.matches * 20;
-          const oldRuns = 160 * e2.matches; 
-          const oldRunsConceded = oldOvers * ((oldRuns / oldOvers) - e2.nrr);
-          
-          const newRuns = oldRuns + t2Runs;
-          const newOvers = oldOvers + t2Overs;
-          const newRunsConceded = oldRunsConceded + t1Runs;
-          const newOversBowled = oldOvers + t1Overs;
-          
-          e2.nrr = (newRuns / newOvers) - (newRunsConceded / newOversBowled);
-          e2.matches += 1;
-          if (!isT1Winner) { e2.wins += 1; e2.points += 2; e2.qualificationChance += 8; }
-          else { e2.losses += 1; e2.qualificationChance -= 8; }
-        }
+        const r1 = sim.t1Runs || 0, o1 = sim.t1Overs || 20, r2 = sim.t2Runs || 0, o2 = sim.t2Overs || 20;
+        const isT1W = sim.winner === match.team1;
+        const e1 = tableMap[match.team1], e2 = tableMap[match.team2];
+        if (e1) { const oo = e1.matches*20, or = 160*e1.matches, orc = oo*((or/oo)-e1.nrr); e1.nrr = ((or+r1)/(oo+o1))-((orc+r2)/(oo+o2)); e1.matches+=1; if(isT1W){e1.wins+=1;e1.points+=2;}else{e1.losses+=1;} }
+        if (e2) { const oo = e2.matches*20, or = 160*e2.matches, orc = oo*((or/oo)-e2.nrr); e2.nrr = ((or+r2)/(oo+o2))-((orc+r1)/(oo+o1)); e2.matches+=1; if(!isT1W){e2.wins+=1;e2.points+=2;}else{e2.losses+=1;} }
       }
     });
-
-    return Object.values(tableMap).sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.nrr - a.nrr;
-    });
+    return Object.values(tableMap).sort((a, b) => b.points !== a.points ? b.points - a.points : b.nrr - a.nrr);
   }, [simulatedMatches, baseTable, liveMatches]);
 
   const getRankChange = (team: string) => {
     if (!baseTable) return 0;
-    const oldSorted = [...baseTable].sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      return b.nrr - a.nrr;
-    });
-    const oldRank = oldSorted.findIndex(e => e.team === team);
-    const newRank = computedTable.findIndex(e => e.team === team);
-    return oldRank - newRank; 
+    const old = [...baseTable].sort((a, b) => b.points !== a.points ? b.points - a.points : b.nrr - a.nrr);
+    return old.findIndex(e => e.team === team) - computedTable.findIndex(e => e.team === team);
   };
 
   if (loading || !liveMatches || !baseTable) {
-    return <div className="min-h-screen flex items-center justify-center text-brand-400">Loading Live Simulator Engine...</div>;
+    return <div className='min-h-screen p-8'><div className='max-w-5xl mx-auto space-y-3'>{Array.from({length:8}).map((_,i)=><div key={i} className='skeleton h-14 w-full'/>)}</div></div>;
   }
 
-  const isSimulating = Object.keys(simulatedMatches).length > 0;
+  const isSimActive = Object.keys(simulatedMatches).length > 0;
 
   return (
-    <div className='relative min-h-screen pt-24 pb-16 overflow-hidden'>
-      <div className="absolute top-20 left-1/2 -translate-x-1/2 w-full max-w-3xl h-[400px] bg-brand-500/10 blur-[150px] rounded-full pointer-events-none"></div>
-
-      <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className='mb-10 text-center sm:text-left flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6'
-        >
-          <div>
-            <h1 className='text-4xl md:text-5xl font-black mb-4 tracking-tight'>
-              <span className='text-gradient bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite]'>
-                Advanced Simulator
-              </span>
-            </h1>
-            <p className='text-slate-400 text-lg max-w-2xl'>Simulate matches instantly, load scenarios, and visualize the dynamic path to the playoffs.</p>
-          </div>
-          
-          <div className="flex flex-wrap gap-3">
-            <button onClick={autoSimulateAll} className='px-4 py-2 bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-500 hover:to-accent-500 text-white rounded-xl font-bold flex items-center shadow-neon transition-all'>
-              <Zap className="w-4 h-4 mr-2" /> Auto-Simulate All
-            </button>
-            <button onClick={saveScenarioToStorage} className='px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white border border-white/10 rounded-xl font-bold flex items-center transition-all'>
-              <Save className="w-4 h-4 mr-2" /> Save
-            </button>
-            {hasSavedScenario && (
-              <button onClick={loadScenarioFromStorage} className='px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white border border-white/10 rounded-xl font-bold flex items-center transition-all'>
-                <Download className="w-4 h-4 mr-2" /> Load
-              </button>
-            )}
-            {isSimulating && (
-              <button onClick={clearSimulations} className='px-4 py-2 bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 border border-rose-500/30 rounded-xl font-bold flex items-center transition-all'>
-                <RefreshCcw className="w-4 h-4 mr-2" /> Reset
-              </button>
-            )}
-          </div>
+    <div className='min-h-screen p-6 md:p-8'>
+      <div className='max-w-6xl mx-auto'>
+        <motion.div initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className='mb-6'>
+          <p className='section-label mb-2'>IPL 2026</p>
+          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>MATCH SIMULATOR</h1>
         </motion.div>
 
-        <div className='grid grid-cols-1 lg:grid-cols-12 gap-8'>
-          
-          {/* Upcoming Matches Sidebar */}
-          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className='lg:col-span-4'>
-            <div className='glass-card rounded-3xl p-6 h-[800px] flex flex-col'>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-brand-500/20 rounded-lg"><Calendar className="w-5 h-5 text-brand-400" /></div>
-                  <h2 className='text-xl font-bold text-white'>Fixtures</h2>
-                </div>
-                <div className="text-xs font-bold text-brand-400 bg-brand-500/20 px-3 py-1 rounded-full">
-                  {Object.keys(simulatedMatches).length} / {liveMatches.length} Done
+        {/* Action Bar */}
+        <div className='flex flex-wrap gap-2 mb-6'>
+          <button onClick={autoSimulateAll} className='btn-simulate' style={{ width: 'auto', padding: '10px 20px', fontSize: 13 }}>
+            <Zap size={14} className='inline mr-2' />AUTO-SIMULATE ALL
+          </button>
+          <button onClick={() => { localStorage.setItem('ipl_simulator_scenario_v1', JSON.stringify(simulatedMatches)); setHasSavedScenario(true); }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#8890A0' }}>
+            <Save size={13} className='inline mr-1' /> Save
+          </button>
+          {hasSavedScenario && <button onClick={() => { const s = localStorage.getItem('ipl_simulator_scenario_v1'); if(s) { setSimulatedMatches(JSON.parse(s)); setSelectedMatch(null); } }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#8890A0' }}><Download size={13} className='inline mr-1' /> Load</button>}
+          {isSimActive && <button onClick={() => { setSimulatedMatches({}); setSelectedMatch(null); }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: 'rgba(232,0,61,0.1)', border: '1px solid rgba(232,0,61,0.2)', color: '#E8003D' }}><RefreshCcw size={13} className='inline mr-1' /> Reset</button>}
+        </div>
+
+        <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
+          {/* Fixtures Sidebar */}
+          <div className='lg:col-span-4'>
+            <div className='surface-card p-4' style={{ maxHeight: 700, overflowY: 'auto' }}>
+              <div className='flex items-center justify-between mb-2'>
+                <p className='section-label'>FIXTURES</p>
+                <span style={{ fontSize: 11, color: '#D4AF37', fontWeight: 700 }}>{Object.keys(simulatedMatches).length}/{liveMatches.length}</span>
+              </div>
+              {/* Progress Bar */}
+              <div className='mb-3'>
+                <div className='w-full h-1.5 rounded-full' style={{ background: '#1E2028' }}>
+                  <motion.div className='h-full rounded-full' style={{ background: 'linear-gradient(90deg, #D4AF37, #1D9E75)' }}
+                    initial={{ width: 0 }} animate={{ width: `${(Object.keys(simulatedMatches).length / Math.max(liveMatches.length, 1)) * 100}%` }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 20 }} />
                 </div>
               </div>
-
-              {/* Feature 3: Target Team Filter */}
-              <div className="mb-4">
-                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block flex items-center"><Target className="w-3 h-3 mr-1"/> Path to Playoffs Focus</label>
-                <select 
-                  value={targetTeam} 
-                  onChange={(e) => setTargetTeam(e.target.value)}
-                  className="w-full bg-slate-900 border border-white/10 rounded-lg p-2 text-sm text-white font-bold outline-none focus:border-brand-400"
-                >
-                  <option value="NONE">-- Select Favorite Team --</option>
-                  {Object.entries(teamInfo).map(([key, t]) => <option key={key} value={key}>{t.name}</option>)}
+              <div className='mb-3'>
+                <select value={targetTeam} onChange={(e) => setTargetTeam(e.target.value)} className='w-full py-2 px-3 text-xs font-semibold rounded' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none' }}>
+                  <option value="NONE">Focus: All Teams</option>
+                  {Object.entries(teamInfo).map(([k, t]) => <option key={k} value={k}>{t.name}</option>)}
                 </select>
               </div>
-
-              <div className='space-y-3 overflow-y-auto pr-2 custom-scrollbar flex-1'>
+              <div className='space-y-2'>
                 {liveMatches.map((match, idx) => {
-                  const t1 = teamInfo[match.team1];
-                  const t2 = teamInfo[match.team2];
-                  const isSelected = selectedMatch === idx;
                   const sim = simulatedMatches[match.id];
-                  
-                  // Highlight logic: If targetTeam is playing, glow their matches!
+                  const isSelected = selectedMatch === idx;
                   const involvesTarget = targetTeam !== 'NONE' && (match.team1 === targetTeam || match.team2 === targetTeam);
-                  
+                  const t1 = teamInfo[match.team1]; const t2 = teamInfo[match.team2];
                   return (
-                    <motion.button
-                      key={match.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSelectMatch(idx)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all duration-300 border relative overflow-hidden ${
-                        isSelected
-                          ? 'bg-brand-500/20 border-brand-500/50 shadow-neon'
-                          : sim
-                            ? 'bg-green-500/10 border-green-500/30'
-                            : involvesTarget 
-                              ? 'bg-yellow-500/10 border-yellow-500/40' // Target Highlight
-                              : 'bg-white/5 border-white/5 hover:bg-white/10'
-                      }`}
-                    >
-                      {sim && <div className="absolute top-0 right-0 w-8 h-8 bg-green-500/20 rounded-bl-2xl flex items-center justify-center"><CheckCircle2 className="w-4 h-4 text-green-400" /></div>}
-                      {involvesTarget && !sim && <div className="absolute top-0 right-0 w-8 h-8 bg-yellow-500/20 rounded-bl-2xl flex items-center justify-center"><Target className="w-4 h-4 text-yellow-400 animate-pulse" /></div>}
-                      
-                      <div className='flex items-center justify-between mb-2 pr-4'>
-                        <span className={`text-xs font-semibold ${sim ? 'text-green-400' : involvesTarget ? 'text-yellow-400' : 'text-slate-400'}`}>Match {match.matchNumber}</span>
+                    <motion.button key={match.id} onClick={() => handleSelectMatch(idx)}
+                      whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
+                      className='w-full text-left p-3 rounded transition-all' style={{
+                      background: isSelected ? 'rgba(212,175,55,0.08)' : sim ? 'rgba(29,158,117,0.06)' : involvesTarget ? 'rgba(212,175,55,0.04)' : '#111318',
+                      border: `1px solid ${isSelected ? 'rgba(212,175,55,0.3)' : sim ? 'rgba(29,158,117,0.2)' : '#1E2028'}`,
+                      borderLeft: sim ? `3px solid ${teamInfo[sim.winner]?.color || '#1D9E75'}` : isSelected ? '3px solid #D4AF37' : undefined,
+                    }}>
+                      <div className='flex items-center justify-between mb-1.5'>
+                        <span style={{ fontSize: 10, color: sim ? '#1D9E75' : '#3D4356', fontWeight: 700 }}>M{match.matchNumber}</span>
+                        {sim && <span className='px-1.5 py-0.5 rounded' style={{ fontSize: 8, background: 'rgba(29,158,117,0.1)', color: '#1D9E75', fontWeight: 700 }}>SIMULATED</span>}
                       </div>
                       <div className='flex items-center justify-between'>
-                        <div className="flex items-center space-x-2">
-                          <TeamLogoBadge
-                            team={t1}
-                            className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 shadow-sm ring-1 ring-white/10"
-                            imageClassName="w-4 h-4 object-contain drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]"
-                          />
-                          <span className={`font-bold ${sim?.winner === match.team1 || (!sim && match.team1 === targetTeam) ? 'text-white' : 'text-slate-400'}`}>{t1.shortName}</span>
+                        <div className='flex items-center gap-1.5'>
+                          <div className='w-5 h-5 rounded-full overflow-hidden border' style={{ borderColor: sim?.winner === match.team1 ? '#D4AF37' : '#1E2028', background: '#0D0F14' }}>
+                            <img src={t1.captain?.image} alt={match.team1} className='w-full h-full object-cover'
+                              onError={(e) => { (e.target as HTMLImageElement).src = t1.captain?.fallbackImage || ''; }} />
+                          </div>
+                          <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
+                            <img src={t1.logo} alt={match.team1} className='w-full h-full object-contain' />
+                          </div>
+                          <span className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: sim?.winner === match.team1 ? '#D4AF37' : '#8890A0' }}>{match.team1}</span>
                         </div>
-                        <span className="text-slate-500 text-[10px] font-black italic">VS</span>
-                        <div className="flex items-center space-x-2">
-                          <span className={`font-bold ${sim?.winner === match.team2 || (!sim && match.team2 === targetTeam) ? 'text-white' : 'text-slate-400'}`}>{t2.shortName}</span>
-                          <TeamLogoBadge
-                            team={t2}
-                            className="w-6 h-6 rounded-full overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 shadow-sm ring-1 ring-white/10"
-                            imageClassName="w-4 h-4 object-contain drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]"
-                          />
+                        <span style={{ color: '#3D4356', fontSize: 9, fontWeight: 700 }}>vs</span>
+                        <div className='flex items-center gap-1.5'>
+                          <span className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: sim?.winner === match.team2 ? '#D4AF37' : '#8890A0' }}>{match.team2}</span>
+                          <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
+                            <img src={t2.logo} alt={match.team2} className='w-full h-full object-contain' />
+                          </div>
+                          <div className='w-5 h-5 rounded-full overflow-hidden border' style={{ borderColor: sim?.winner === match.team2 ? '#D4AF37' : '#1E2028', background: '#0D0F14' }}>
+                            <img src={t2.captain?.image} alt={match.team2} className='w-full h-full object-cover'
+                              onError={(e) => { (e.target as HTMLImageElement).src = t2.captain?.fallbackImage || ''; }} />
+                          </div>
                         </div>
                       </div>
-                      
-                      <AnimatePresence>
-                        {sim && (
-                          <motion.div 
-                            initial={{ height: 0, opacity: 0, scale: 0.95 }}
-                            animate={{ height: 'auto', opacity: 1, scale: 1 }}
-                            exit={{ height: 0, opacity: 0, scale: 0.95 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                            className="mt-3 overflow-hidden origin-top"
-                          >
-                            <div className="bg-gradient-to-r from-green-500/20 via-green-500/10 to-transparent border-l-2 border-green-500 py-2.5 px-4 rounded-r-lg flex flex-col justify-center">
-                              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Simulation Result</span>
-                              <span className="text-sm font-black text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]">
-                                {sim.mode === 'quick' 
-                                  ? `${sim.winner} won by ${sim.marginValue} ${sim.marginType}` 
-                                  : `${sim.winner} Won`}
-                              </span>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      {sim && <p style={{ fontSize: 9, color: '#1D9E75', marginTop: 4, textAlign: 'center' }}>{sim.winner} +{sim.marginValue} {sim.marginType}</p>}
                     </motion.button>
                   );
                 })}
               </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Simulator Panel & Table */}
-          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className='lg:col-span-8 flex flex-col space-y-6'>
-            
+          {/* Control Panel + Table */}
+          <div className='lg:col-span-8 space-y-6'>
             {/* Control Panel */}
-            <div className='glass-card rounded-3xl p-6 relative overflow-hidden'>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-accent-500/10 blur-[80px] rounded-full pointer-events-none"></div>
-              
+            <div className='surface-card p-6'>
               {currentMatch ? (
                 <>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-accent-500/20 rounded-lg"><Sliders className="w-5 h-5 text-accent-400" /></div>
-                      <h2 className='text-xl font-bold text-white'>Match {currentMatch.matchNumber} Simulation</h2>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className='p-6 bg-slate-950/50 rounded-2xl border border-white/10 flex flex-col items-center justify-center'>
-                      <label className='block text-slate-300 font-semibold mb-4 text-center'>1. Select Winner</label>
-                      <div className='flex items-center justify-between w-full'>
-                        {[currentMatch.team1, currentMatch.team2].map((team) => (
-                          <div key={team} className="flex flex-col items-center w-2/5">
-                            <motion.button
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => setSelectedWinner(team)}
-                              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-white text-xl font-black mb-3 shadow-lg transition-all border-4 ${
-                                selectedWinner === team ? 'border-brand-400 scale-110 shadow-neon' : 'border-transparent opacity-60 hover:opacity-100'
-                              }`}
-                              style={{ backgroundColor: teamInfo[team].color }}
-                            >
-                              {team}
-                            </motion.button>
-                          </div>
-                        ))}
-                        <div className='absolute left-1/2 -translate-x-1/2 text-xl font-black text-slate-700 italic top-[60%]'>VS</div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col justify-center">
-                      {selectedMatchProbabilities && (
-                        <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <div className="flex items-center gap-2 text-sm font-bold text-slate-200 mb-3">
-                            <Gauge className="w-4 h-4 text-brand-400" />
-                            Win Probability Snapshot
-                          </div>
-                          <div className="space-y-3 text-sm">
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span>{currentMatch.team1}</span>
-                              <span className="font-bold text-white">{selectedMatchProbabilities[currentMatch.team1]}%</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-brand-400 to-accent-400" style={{ width: `${selectedMatchProbabilities[currentMatch.team1]}%` }} />
-                            </div>
-                            <div className="flex items-center justify-between text-slate-300">
-                              <span>{currentMatch.team2}</span>
-                              <span className="font-bold text-white">{selectedMatchProbabilities[currentMatch.team2]}%</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-                              <div className="h-full bg-gradient-to-r from-accent-400 to-brand-400" style={{ width: `${selectedMatchProbabilities[currentMatch.team2]}%` }} />
-                            </div>
-                          </div>
+                  <p className='section-label mb-4'>SIMULATE MATCH {currentMatch.matchNumber} — {currentMatch.team1} vs {currentMatch.team2}</p>
+                  {/* Win Probability Bar */}
+                  {(() => {
+                    const probs = estimateWinProbability(currentMatch, baseTable || []);
+                    const prob1 = Math.round(probs[currentMatch.team1] || 50);
+                    const prob2 = Math.round(probs[currentMatch.team2] || 50);
+                    const ti1 = teamInfo[currentMatch.team1]; const ti2 = teamInfo[currentMatch.team2];
+                    return (
+                      <div className='mb-4 p-3 rounded' style={{ background: '#0D0F14', border: '1px solid #1E2028' }}>
+                        <div className='flex justify-between mb-1'>
+                          <span style={{ fontSize: 10, color: '#E8E8E8', fontWeight: 700 }}>{prob1}%</span>
+                          <span style={{ fontSize: 8, color: '#3D4356', letterSpacing: '0.1em', textTransform: 'uppercase' }}>AI WIN PREDICTION</span>
+                          <span style={{ fontSize: 10, color: '#E8E8E8', fontWeight: 700 }}>{prob2}%</span>
                         </div>
-                      )}
-
-                      <div className="flex space-x-2 mb-4 bg-slate-900 p-1 rounded-xl">
-                        <button onClick={() => setSimMode('quick')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${simMode === 'quick' ? 'bg-brand-500/20 text-white shadow-neon' : 'text-slate-500 hover:text-white'}`}>Quick Mode</button>
-                        <button onClick={() => setSimMode('deep')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${simMode === 'deep' ? 'bg-accent-500/20 text-white shadow-neon' : 'text-slate-500 hover:text-white'}`}>Deep NRR Mode</button>
+                        <div className='flex rounded overflow-hidden' style={{ height: 6 }}>
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${prob1}%` }} transition={{ type: 'spring', stiffness: 150, damping: 20 }}
+                            style={{ background: ti1.color }} />
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${prob2}%` }} transition={{ type: 'spring', stiffness: 150, damping: 20 }}
+                            style={{ background: ti2.color }} />
+                        </div>
                       </div>
+                    );
+                  })()}
+                  <div className='grid grid-cols-2 gap-4 mb-4'>
+                    {[currentMatch.team1, currentMatch.team2].map(team => {
+                      const ti = teamInfo[team];
+                      const isSelected = selectedWinner === team;
+                      return (
+                        <motion.button key={team} onClick={() => setSelectedWinner(team)}
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                          className='p-4 rounded text-center transition-all flex flex-col items-center gap-2' style={{
+                          background: isSelected ? 'rgba(212,175,55,0.1)' : '#0D0F14',
+                          border: `2px solid ${isSelected ? '#D4AF37' : '#1E2028'}`,
+                        }}>
+                          <motion.div className='w-16 h-16 rounded-full overflow-hidden border-2'
+                            animate={{ borderColor: isSelected ? '#D4AF37' : ti.color, scale: isSelected ? 1.05 : 1 }}
+                            style={{ background: '#0D0F14' }}>
+                            <img src={ti.captain?.image} alt={ti.captain?.name} className='w-full h-full object-cover'
+                              onError={(e) => { (e.target as HTMLImageElement).src = ti.captain?.fallbackImage || ''; }} />
+                          </motion.div>
+                          <div className='flex items-center gap-1'>
+                            <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
+                              <img src={ti.logo} alt={team} className='w-full h-full object-contain' />
+                            </div>
+                            <span className='font-bold' style={{ fontFamily: 'var(--font-barlow)', fontSize: 18, color: isSelected ? '#D4AF37' : '#8890A0' }}>{team}</span>
+                          </div>
+                          <span style={{ fontSize: 10, color: '#3D4356' }}>{ti.captain?.name}</span>
+                          {isSelected && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className='text-xs font-bold' style={{ color: '#D4AF37' }}>WINNER ✓</motion.span>}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
 
-                      <button
-                        onClick={smartSimulateCurrent}
-                        className="mb-4 w-full p-3 rounded-xl font-bold flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-white hover:bg-brand-500/20 transition-all"
-                        disabled={!currentMatch}
-                      >
-                        <Sparkles className="w-4 h-4 text-accent-400" />
-                        Smart Simulate This Match
-                      </button>
-
-                      {simMode === 'quick' ? (
-                        <>
-                          <label className='block text-slate-300 font-semibold mb-3'>2. Quick Win Margin</label>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
-                            <button onClick={() => applySimulation(selectedWinner!, 'runs', 5)} disabled={!selectedWinner} className={`p-2 rounded-lg text-sm font-bold border transition-all ${selectedWinner ? 'bg-white/5 border-white/10 hover:bg-brand-500/20 text-white' : 'opacity-50 cursor-not-allowed'}`}>Close (+5R)</button>
-                            <button onClick={() => applySimulation(selectedWinner!, 'runs', 20)} disabled={!selectedWinner} className={`p-2 rounded-lg text-sm font-bold border transition-all ${selectedWinner ? 'bg-white/5 border-white/10 hover:bg-brand-500/40 text-white' : 'opacity-50 cursor-not-allowed'}`}>Normal (+20R)</button>
-                            <button onClick={() => applySimulation(selectedWinner!, 'runs', 60)} disabled={!selectedWinner} className={`p-2 rounded-lg text-sm font-bold border transition-all ${selectedWinner ? 'bg-white/5 border-white/10 hover:bg-brand-500/60 shadow-neon text-white' : 'opacity-50 cursor-not-allowed'}`}>Huge (+60R)</button>
-                          </div>
-
-                          <div className="flex items-center gap-4 mb-4">
-                            <div className="h-[1px] bg-white/10 flex-1"></div>
-                            <span className="text-xs font-bold text-slate-500 uppercase">Or Custom</span>
-                            <div className="h-[1px] bg-white/10 flex-1"></div>
-                          </div>
-
-                          <div className="flex gap-2 mb-4">
-                            <select value={marginType} onChange={(e) => setMarginType(e.target.value as MarginType)} className="bg-slate-900 border border-white/10 rounded-lg p-2 text-white font-bold outline-none flex-1">
-                              <option value="runs">Runs</option>
-                              <option value="wickets">Wickets</option>
-                            </select>
-                            <input type='number' value={marginValue} onChange={(e) => setMarginValue(e.target.value)} placeholder='Margin' className='w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-white font-bold outline-none flex-1' />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <label className='block text-accent-300 font-semibold mb-3'>2. Enter Exact Scores</label>
-                          <div className="flex items-center space-x-2 mb-3">
-                            <span className="w-12 font-bold text-slate-300 text-sm">{currentMatch.team1}</span>
-                            <input type='number' value={t1Runs} onChange={(e) => setT1Runs(e.target.value)} placeholder='Runs' className='w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm font-bold outline-none flex-1' />
-                            <span className="text-slate-500 text-xs">in</span>
-                            <input type='number' step="0.1" value={t1Overs} onChange={(e) => setT1Overs(e.target.value)} placeholder='Ovs' className='w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm font-bold outline-none flex-1' />
-                          </div>
-                          <div className="flex items-center space-x-2 mb-6">
-                            <span className="w-12 font-bold text-slate-300 text-sm">{currentMatch.team2}</span>
-                            <input type='number' value={t2Runs} onChange={(e) => setT2Runs(e.target.value)} placeholder='Runs' className='w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm font-bold outline-none flex-1' />
-                            <span className="text-slate-500 text-xs">in</span>
-                            <input type='number' step="0.1" value={t2Overs} onChange={(e) => setT2Overs(e.target.value)} placeholder='Ovs' className='w-full p-2 bg-slate-900 border border-white/10 rounded-lg text-white text-sm font-bold outline-none flex-1' />
-                          </div>
-                        </>
-                      )}
-                      
-                      <button
-                        onClick={saveSimulation}
-                        disabled={!selectedWinner || (simMode === 'quick' && !marginValue) || (simMode === 'deep' && (!t1Runs || !t2Runs))}
-                        className={`w-full p-3 rounded-xl font-bold flex items-center justify-center transition-all ${
-                          (selectedWinner && simMode === 'quick' && marginValue) || (selectedWinner && simMode === 'deep' && t1Runs && t2Runs)
-                            ? 'bg-gradient-to-r from-brand-500 to-accent-500 text-white shadow-neon cursor-pointer hover:scale-[1.02] active:scale-95' 
-                            : 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
-                        }`}
-                      >
-                        <Play className="w-4 h-4 mr-2" /> Apply Manual
-                      </button>
+                  {/* Mode Toggle */}
+                  <div className='pill-toggle mb-4'>
+                    <div className={`pill-toggle-item ${simMode === 'quick' ? 'active' : ''}`} onClick={() => setSimMode('quick')} style={{ position: 'relative' }}>
+                      {simMode === 'quick' && <motion.div layoutId='sim-mode-pill' className='absolute inset-0 rounded' style={{ background: '#D4AF37', zIndex: 0 }} />}
+                      <span className='relative z-10'>Quick</span>
+                    </div>
+                    <div className={`pill-toggle-item ${simMode === 'deep' ? 'active' : ''}`} onClick={() => setSimMode('deep')} style={{ position: 'relative' }}>
+                      {simMode === 'deep' && <motion.div layoutId='sim-mode-pill' className='absolute inset-0 rounded' style={{ background: '#D4AF37', zIndex: 0 }} />}
+                      <span className='relative z-10'>Deep NRR</span>
                     </div>
                   </div>
+
+                  <button onClick={smartSimulateCurrent} className='w-full mb-4 p-3 rounded text-sm font-semibold flex items-center justify-center gap-2' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#E8E8E8' }}>
+                    <Sparkles size={14} style={{ color: '#D4AF37' }} /> Smart Simulate
+                  </button>
+
+                  {simMode === 'quick' ? (
+                    <div className='space-y-3'>
+                      <div className='grid grid-cols-3 gap-2'>
+                        {[{ l: 'Close (+5R)', t: 'runs' as MarginType, v: 5 }, { l: 'Normal (+20R)', t: 'runs' as MarginType, v: 20 }, { l: 'Huge (+60R)', t: 'runs' as MarginType, v: 60 }].map(q => (
+                          <button key={q.l} disabled={!selectedWinner} onClick={() => applySimulation(selectedWinner!, q.t, q.v)} className='p-2 rounded text-xs font-semibold' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: selectedWinner ? '#E8E8E8' : '#3D4356', opacity: selectedWinner ? 1 : 0.5 }}>{q.l}</button>
+                        ))}
+                      </div>
+                      <div className='flex gap-2'>
+                        <select value={marginType} onChange={(e) => setMarginType(e.target.value as MarginType)} className='py-2 px-3 rounded text-sm font-semibold' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }}>
+                          <option value="runs">Runs</option><option value="wickets">Wickets</option>
+                        </select>
+                        <input type='number' value={marginValue} onChange={(e) => setMarginValue(e.target.value)} placeholder='Margin' className='flex-1 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='space-y-2'>
+                      {[{ team: currentMatch.team1, runs: t1Runs, setR: setT1Runs, overs: t1Overs, setO: setT1Overs }, { team: currentMatch.team2, runs: t2Runs, setR: setT2Runs, overs: t2Overs, setO: setT2Overs }].map(x => (
+                        <div key={x.team} className='flex items-center gap-2'>
+                          <span className='w-12 text-sm font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#8890A0' }}>{x.team}</span>
+                          <input type='number' value={x.runs} onChange={(e) => x.setR(e.target.value)} placeholder='Runs' className='flex-1 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
+                          <span style={{ color: '#3D4356', fontSize: 11 }}>in</span>
+                          <input type='number' step="0.1" value={x.overs} onChange={(e) => x.setO(e.target.value)} placeholder='Ovs' className='w-20 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button onClick={saveSimulation} disabled={!selectedWinner || (simMode === 'quick' && !marginValue) || (simMode === 'deep' && (!t1Runs || !t2Runs))} className='btn-simulate mt-4'>
+                    <Play size={14} className='inline mr-2' />APPLY RESULT
+                  </button>
                 </>
               ) : (
-                <div className='h-full flex flex-col items-center justify-center text-center py-10'>
-                  <h3 className='text-xl font-bold text-white mb-2'>Simulator Ready</h3>
-                  <p className='text-slate-400 text-sm max-w-xs'>Select a match from the fixtures, or click "Auto-Simulate All" to instantly fast-forward the season!</p>
+                <div className='text-center py-12'>
+                  <p className='text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#3D4356' }}>SELECT A FIXTURE</p>
+                  <p style={{ color: '#3D4356', fontSize: 13, marginTop: 4 }}>Or click Auto-Simulate All above</p>
                 </div>
               )}
             </div>
 
-            {/* Feature 5: Dynamic Tiers Table */}
-            <div className='glass-card rounded-3xl p-6'>
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-2">
-                  <Activity className="w-5 h-5 text-brand-400" />
-                  <h3 className="text-lg font-bold text-white">Dynamic Standings</h3>
+            {/* Dynamic Standings */}
+            <div className='surface-card overflow-hidden'>
+              <div className='px-4 py-3' style={{ borderBottom: '1px solid #1E2028' }}>
+                <p className='section-label'>PROJECTED STANDINGS</p>
+              </div>
+              <div className='grid grid-cols-12 gap-2 px-4 py-2' style={{ borderBottom: '1px solid #1E2028', color: '#3D4356', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                <div className='col-span-1'>#</div><div className='col-span-4'>Team</div><div className='col-span-2 text-center'>M</div><div className='col-span-2 text-center'>Pts</div><div className='col-span-3 text-center'>NRR</div>
+              </div>
+              <AnimatePresence>
+                {computedTable.map((entry, idx) => {
+                  const rank = idx + 1;
+                  const rc = getRankChange(entry.team);
+                  const isTop1 = rank === 1;
+                  const isQ = rank <= 4;
+                  const team = teamInfo[entry.team];
+                  const isTarget = entry.team === targetTeam;
+                  return (
+                    <motion.div layout layoutId={`sim-row-${entry.team}`} key={entry.team}
+                      className={`relative grid grid-cols-12 gap-2 px-4 py-3 ${isTop1 ? 'pt-row-gold' : isQ ? 'pt-row-qualify' : ''} ${rc > 0 ? 'flash-up' : rc < 0 ? 'flash-down' : ''}`}
+                      style={{ borderBottom: '1px solid #1E2028', background: isTarget ? 'rgba(212,175,55,0.06)' : undefined }}
+                    >
+                      <span className='ghost-rank'>{rank}</span>
+                      <div className='col-span-1 flex items-center gap-1'>
+                        <span style={{ color: '#3D4356', fontSize: 13, fontWeight: 700 }}>{rank}</span>
+                        {rc > 0 && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><TrendingUp size={12} style={{ color: '#1D9E75' }} /></motion.div>}
+                        {rc < 0 && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><TrendingDown size={12} style={{ color: '#E8003D' }} /></motion.div>}
+                      </div>
+                      <div className='col-span-4 flex items-center gap-2'>
+                        <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
+                          <img src={team.logo} alt={entry.team} className='w-full h-full object-contain' onError={(e) => { (e.target as HTMLImageElement).src = team.fallbackLogo || ''; }} />
+                        </div>
+                        <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: isTarget ? '#D4AF37' : '#E8E8E8' }}>{entry.team}</span>
+                      </div>
+                      <div className='col-span-2 text-center text-sm' style={{ color: '#8890A0' }}>{entry.matches}</div>
+                      <div className='col-span-2 text-center text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{entry.points}</div>
+                      <div className={`col-span-3 text-center text-sm font-semibold ${entry.nrr >= 0 ? 'nrr-positive' : 'nrr-negative'}`}>{entry.nrr >= 0 ? '+' : ''}{entry.nrr.toFixed(3)}</div>
+                      {rank === 4 && <motion.div className='cutoff-line absolute bottom-0 left-0 right-0' initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.4 }}
+                        style={{ height: 2, background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)' }} />}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {/* Celebration Banner */}
+            <AnimatePresence>
+              {Object.keys(simulatedMatches).length === liveMatches.length && liveMatches.length > 0 && (
+                <motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }}
+                  className='surface-card p-5 text-center' style={{ border: '1px solid rgba(212,175,55,0.3)', background: 'rgba(212,175,55,0.04)' }}>
+                  <motion.p animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2 }}
+                    className='text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#D4AF37' }}>
+                    🏆 ALL {liveMatches.length} MATCHES SIMULATED!
+                  </motion.p>
+                  <p style={{ fontSize: 12, color: '#8890A0', marginTop: 4 }}>
+                    Top 4: {computedTable.slice(0, 4).map(e => e.team).join(', ')}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Playoff Scenarios */}
+            {isSimActive && (
+              <div className='surface-card p-4'>
+                <p className='section-label mb-3'>PLAYOFF SCENARIOS</p>
+                <div className='grid grid-cols-2 md:grid-cols-5 gap-2'>
+                  {computedTable.map((entry, idx) => {
+                    const rank = idx + 1;
+                    const ti = teamInfo[entry.team];
+                    const remainingMatches = liveMatches.filter(m => (m.team1 === entry.team || m.team2 === entry.team) && !simulatedMatches[m.id]).length;
+                    const simWins = Object.values(simulatedMatches).filter(s => s.winner === entry.team).length;
+                    return (
+                      <div key={entry.team} className='p-3 rounded text-center' style={{
+                        background: rank <= 4 ? 'rgba(29,158,117,0.06)' : 'rgba(232,0,61,0.04)',
+                        border: `1px solid ${rank <= 4 ? 'rgba(29,158,117,0.15)' : 'rgba(232,0,61,0.1)'}`,
+                      }}>
+                        <div className='w-6 h-6 rounded overflow-hidden mx-auto mb-1' style={{ background: '#1A1D26', padding: 1 }}>
+                          <img src={ti.logo} alt={entry.team} className='w-full h-full object-contain' />
+                        </div>
+                        <p className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: rank <= 4 ? '#1D9E75' : '#E8003D' }}>#{rank}</p>
+                        <p style={{ fontSize: 9, color: '#8890A0' }}>{entry.points}pts • {simWins}W</p>
+                        {remainingMatches > 0 && <p style={{ fontSize: 8, color: '#3D4356' }}>{remainingMatches} left</p>}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              
-              <div className="overflow-x-auto rounded-xl border border-white/5">
-                <table className='w-full whitespace-nowrap text-sm'>
-                  <thead className="bg-slate-900/50">
-                    <tr>
-                      <th className='px-3 py-3 text-left font-semibold text-slate-400'>Pos</th>
-                      <th className='px-3 py-3 text-left font-semibold text-slate-400'>Team</th>
-                      <th className='px-3 py-3 text-center font-semibold text-slate-400'>P</th>
-                      <th className='px-3 py-3 text-center font-semibold text-brand-400'>Pts</th>
-                      <th className='px-3 py-3 text-center font-semibold text-slate-400'>NRR</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    <AnimatePresence>
-                      {computedTable.map((stat, idx) => {
-                        const t = teamInfo[stat.team];
-                        const rankChange = getRankChange(stat.team);
-                        
-                        // Tier Logic
-                        const isQ1 = idx === 0 || idx === 1; // Top 2
-                        const isEliminator = idx === 2 || idx === 3; // 3 & 4
-                        const isTarget = stat.team === targetTeam;
-
-                        return (
-                          <motion.tr 
-                            layout
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            key={stat.team} 
-                            className={`transition-colors border-l-4 ${
-                              isQ1 ? 'bg-amber-500/5 border-l-amber-400 hover:bg-amber-500/10' : 
-                              isEliminator ? 'bg-brand-500/5 border-l-brand-400 hover:bg-brand-500/10' : 
-                              'bg-transparent border-l-transparent hover:bg-white/5 opacity-60 hover:opacity-100'
-                            } ${isTarget ? 'shadow-[inset_0_0_20px_rgba(234,179,8,0.2)]' : ''}`}
-                          >
-                            <td className='px-3 py-3'>
-                              <div className="flex items-center space-x-1 min-w-[80px]">
-                                <span className={`font-black w-5 text-center text-lg ${isQ1 ? 'text-amber-400' : isEliminator ? 'text-brand-400' : 'text-slate-500'}`}>{idx + 1}</span>
-                                
-                                <div className="flex items-center justify-center w-5">
-                                  {isQ1 && <Crown className="w-4 h-4 text-amber-400 drop-shadow-md" />}
-                                  {isEliminator && <Medal className="w-4 h-4 text-brand-400 drop-shadow-md" />}
-                                </div>
-                                
-                                <div className="flex items-center justify-center w-6">
-                                  <AnimatePresence mode="popLayout">
-                                    {rankChange > 0 && (
-                                      <motion.div initial={{ scale: 0, y: 10 }} animate={{ scale: 1, y: 0 }} className="text-green-400 font-bold flex items-center space-x-0.5">
-                                        <TrendingUp className="w-3 h-3" />
-                                        <span className="text-xs leading-none">{rankChange}</span>
-                                      </motion.div>
-                                    )}
-                                    {rankChange < 0 && (
-                                      <motion.div initial={{ scale: 0, y: -10 }} animate={{ scale: 1, y: 0 }} className="text-rose-400 font-bold flex items-center space-x-0.5">
-                                        <TrendingDown className="w-3 h-3" />
-                                        <span className="text-xs leading-none">{Math.abs(rankChange)}</span>
-                                      </motion.div>
-                                    )}
-                                  </AnimatePresence>
-                                </div>
-                              </div>
-                            </td>
-                            <td className='px-3 py-3'>
-                              <div className="flex items-center space-x-3">
-                                <TeamLogoBadge
-                                  team={t}
-                                  className={`w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 shadow-md ${isTarget ? 'ring-2 ring-yellow-400 ring-offset-2 ring-offset-black' : ''}`}
-                                  imageClassName="w-5 h-5 object-contain drop-shadow-[0_1px_4px_rgba(0,0,0,0.35)]"
-                                />
-                                <span className={`font-bold ${isTarget ? 'text-yellow-400' : 'text-white'}`}>{t.name}</span>
-                              </div>
-                            </td>
-                            <td className='px-3 py-3 text-center text-slate-300'>{stat.matches}</td>
-                            <td className={`px-3 py-3 text-center font-black text-lg ${isQ1 ? 'text-amber-400' : isEliminator ? 'text-brand-400' : 'text-slate-400'}`}>{stat.points}</td>
-                            <td className='px-3 py-3 text-center font-semibold text-slate-300'>{stat.nrr > 0 ? '+' : ''}{stat.nrr.toFixed(3)}</td>
-                          </motion.tr>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
+            )}
+          </div>
         </div>
       </div>
     </div>

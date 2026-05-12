@@ -6,10 +6,15 @@ export const metadata = {
 
 export default function FantasyPage() {
   return (
-    <main className="relative min-h-screen pt-24 pb-16 overflow-hidden">
-      <div className="absolute top-24 left-0 w-[500px] h-[500px] bg-cyan-500/10 blur-[140px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-brand-500/10 blur-[160px] rounded-full pointer-events-none" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen p-6 md:p-8">
+      <div className="max-w-5xl mx-auto">
+        <div className='mb-8'>
+          <p className='section-label mb-2'>IPL 2026</p>
+          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+            FANTASY PICKS
+          </h1>
+          <p style={{ color: '#8890A0', marginTop: 8, fontSize: 14 }}>AI-powered fantasy team recommendations.</p>
+        </div>
         <FantasyRecommendations />
       </div>
     </main>

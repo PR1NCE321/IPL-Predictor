@@ -34,12 +34,12 @@ function mapTeamName(value?: string): Team | undefined {
 function parseMatchNumber(matchName?: string): number | undefined {
   if (!matchName) return undefined;
 
-  const numberedMatch = matchName.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i);
-  if (numberedMatch?.[1]) {
-    return Number(numberedMatch[1]);
-  }
+  // "53rd Match" or "Match 53"
+  const m =
+    matchName.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i) ||
+    matchName.match(/Match\s+(\d+)/i);
 
-  return undefined;
+  return m ? Number(m[1]) : undefined;
 }
 
 function resolveWinner(apiMatch: any): Team | undefined {
@@ -59,7 +59,7 @@ function resolveWinner(apiMatch: any): Team | undefined {
 // Global cache to avoid excessive API hits (resets on full page reload)
 let memCacheData_v3: any = null;
 let memCacheTime_v3: number = 0;
-const CACHE_DURATION_MS = 25 * 60 * 1000; // 25 minutes
+const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}): Promise<{ matches: Match[]; pointsTable: PointsTableEntry[]; isMockData?: boolean }> {
   const { forceRefresh = false } = options;
@@ -72,7 +72,7 @@ export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}
   // 2. Fetch from our highly optimized Next.js ISR API route
   try {
     const endpoint = forceRefresh ? '/api/live-data?forceRefresh=1' : '/api/live-data';
-    const response = await fetch(endpoint);
+    const response = await fetch(endpoint, { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
       memCacheData_v3 = data;
@@ -92,7 +92,7 @@ export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}
 
   memCacheData_v3 = fallbackData;
   memCacheTime_v3 = Date.now();
-  
+
   return fallbackData;
 }
 

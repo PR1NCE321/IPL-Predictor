@@ -1,24 +1,25 @@
 'use client';
 
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { teamInfo } from '@/data/mockData';
-import { ChevronLeft, TrendingUp, AlertCircle, CheckCircle2, Trophy, Crown, Medal, Activity } from 'lucide-react';
+import { CheckCircle2, Activity } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
-import { TeamLogoBadge } from '@/components/common/TeamLogoBadge';
+import { useCountUp } from '@/hooks/useCountUp';
+
+function AnimatedPercent({ value }: { value: number }) {
+  const v = useCountUp(value, 800, 1);
+  return <>{v}%</>;
+}
 
 export default function AnalyticsPage() {
   const { matches, pointsTable: sortedTable, loading, error } = useLiveSystemData();
   const [mcProbabilities, setMcProbabilities] = useState<Record<string, number>>({});
   const [isSimulating, setIsSimulating] = useState(true);
 
-  // Live Monte Carlo Simulation Engine
   useEffect(() => {
     if (!matches || !sortedTable) return;
-    
     const pendingMatches = matches.filter(m => m.status === 'pending');
-    
     if (pendingMatches.length === 0) {
       const finalProbs: Record<string, number> = {};
       sortedTable.forEach((t, idx) => finalProbs[t.team] = idx < 4 ? 100 : 0);
@@ -26,227 +27,209 @@ export default function AnalyticsPage() {
       setIsSimulating(false);
       return;
     }
-    
     setIsSimulating(true);
-    // Non-blocking Monte Carlo computation
     setTimeout(() => {
       const NUM_SIMS = 10000;
       const qualifyCount: Record<string, number> = {};
       sortedTable.forEach(t => qualifyCount[t.team] = 0);
-      
       for (let i = 0; i < NUM_SIMS; i++) {
         const simPoints: Record<string, number> = {};
         sortedTable.forEach(t => simPoints[t.team] = t.points);
-        
-        for (let j = 0; j < pendingMatches.length; j++) {
-          const m = pendingMatches[j];
+        for (const m of pendingMatches) {
           const winner = Math.random() > 0.5 ? m.team1 : m.team2;
           simPoints[winner] += 2;
         }
-        
-        const simTable = sortedTable.map(t => ({
-          team: t.team,
-          pts: simPoints[t.team],
-          nrr: t.nrr // Basic tie breaker
-        })).sort((a, b) => {
-          if (b.pts !== a.pts) return b.pts - a.pts;
-          // In reality, NRR would shift dynamically, but for ultra-fast sim, base NRR is used to resolve ties
-          return b.nrr - a.nrr; 
-        });
-        
-        // Top 4 qualify
-        for (let j = 0; j < 4; j++) {
-          qualifyCount[simTable[j].team] += 1;
-        }
+        const simTable = sortedTable.map(t => ({ team: t.team, pts: simPoints[t.team], nrr: t.nrr }))
+          .sort((a, b) => b.pts !== a.pts ? b.pts - a.pts : b.nrr - a.nrr);
+        for (let j = 0; j < 4; j++) qualifyCount[simTable[j].team] += 1;
       }
-      
       const finalProbs: Record<string, number> = {};
-      for (const team in qualifyCount) {
-        finalProbs[team] = (qualifyCount[team] / NUM_SIMS) * 100;
-      }
+      for (const team in qualifyCount) finalProbs[team] = (qualifyCount[team] / NUM_SIMS) * 100;
       setMcProbabilities(finalProbs);
       setIsSimulating(false);
     }, 100);
   }, [matches, sortedTable]);
 
   if (loading || !sortedTable) {
-    return <div className="min-h-screen flex items-center justify-center text-brand-400">Loading Live Standings...</div>;
+    return (
+      <div className='min-h-screen p-8'>
+        <div className='max-w-5xl mx-auto space-y-3'>
+          {Array.from({ length: 10 }).map((_, i) => <div key={i} className='skeleton h-14 w-full' />)}
+        </div>
+      </div>
+    );
   }
 
-  const playoffLeader = sortedTable[0].team;
-  const inContentionCount = sortedTable.filter(t => {
-    const chance = mcProbabilities[t.team] || 0;
-    return chance > 0 && chance < 100;
-  }).length;
+  const completed = matches?.filter(m => m.status === 'completed').length || 0;
 
   return (
-    <div className='relative min-h-screen pt-24 pb-16 overflow-hidden'>
-      {/* Decorative Background */}
-      <div className="absolute top-20 right-20 w-[500px] h-[500px] bg-accent-500/10 blur-[150px] rounded-full pointer-events-none"></div>
-      <div className="absolute bottom-20 left-20 w-[500px] h-[500px] bg-brand-500/10 blur-[150px] rounded-full pointer-events-none"></div>
-
-      <div className='relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+    <div className='min-h-screen p-6 md:p-8'>
+      <div className='max-w-5xl mx-auto'>
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className='mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6'
+          initial={{ x: 40, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className='mb-8'
         >
-          <div>
-            <h1 className='text-4xl md:text-5xl font-black mb-4 tracking-tight'>
-              <span className='text-gradient bg-[length:200%_auto] animate-[shimmer_3s_linear_infinite]'>
-                Analytics Dashboard
-              </span>
-            </h1>
-            <p className='text-slate-400 text-lg max-w-2xl'>Live Monte Carlo simulations computing exactly 10,000 future scenarios to calculate real qualification probabilities.</p>
-            {error && <p className='mt-3 text-sm text-rose-400'>Live data unavailable, showing the last successful snapshot.</p>}
-          </div>
-
-          <div className={`px-4 py-2 rounded-xl flex items-center border ${isSimulating ? 'bg-accent-500/10 border-accent-500/30' : 'bg-green-500/10 border-green-500/30'}`}>
+          <p className='section-label mb-2'>IPL 2026</p>
+          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+            ANALYTICS DASHBOARD
+          </h1>
+          <div className='flex items-center gap-3 mt-3'>
             {isSimulating ? (
-              <>
-                <Activity className="w-4 h-4 text-accent-400 animate-pulse mr-2" />
-                <span className="text-accent-400 text-sm font-bold">Running 10,000 Simulations...</span>
-              </>
+              <span className='flex items-center gap-2 text-xs font-semibold' style={{ color: '#D4AF37' }}>
+                <Activity size={14} className='animate-pulse' /> Running 10,000 simulations...
+              </span>
             ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-green-400 mr-2" />
-                <span className="text-green-400 text-sm font-bold">Probabilities Updated</span>
-              </>
+              <span className='flex items-center gap-2 text-xs font-semibold' style={{ color: '#1D9E75' }}>
+                <CheckCircle2 size={14} /> Probabilities computed
+              </span>
             )}
           </div>
+          {error && <p className='mt-2 text-xs' style={{ color: '#E8003D' }}>Live data unavailable.</p>}
         </motion.div>
 
-        {/* Stats Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className='glass-card rounded-3xl overflow-hidden shadow-2xl relative'
-        >
-          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-          
-          <div className="overflow-x-auto relative z-10">
-            <table className='w-full whitespace-nowrap'>
-              <thead>
-                <tr className='bg-slate-900/80 border-b border-white/10'>
-                  <th className='px-6 py-5 text-left text-sm font-black tracking-wider text-slate-400 uppercase'>Pos</th>
-                  <th className='px-6 py-5 text-left text-sm font-black tracking-wider text-slate-400 uppercase'>Franchise</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-slate-400 uppercase'>P</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-slate-400 uppercase'>W</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-slate-400 uppercase'>L</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-brand-400 uppercase'>Pts</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-slate-400 uppercase'>NRR</th>
-                  <th className='px-6 py-5 text-center text-sm font-black tracking-wider text-accent-400 uppercase'>Qualification %</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                <AnimatePresence>
-                  {sortedTable.map((stat, idx) => {
-                    const t = teamInfo[stat.team];
-                    const isQ1 = idx === 0 || idx === 1; // Top 2
-                    const isEliminator = idx === 2 || idx === 3; // 3 & 4
-                    const isTop4 = isQ1 || isEliminator;
-                    
-                    const actualChance = isSimulating ? 0 : (mcProbabilities[stat.team] || 0);
-
-                    return (
-                      <motion.tr 
-                        layout
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: idx * 0.05 }}
-                        key={stat.team} 
-                        className={`hover:bg-white/5 transition-colors group ${isQ1 ? 'bg-amber-500/5' : isEliminator ? 'bg-brand-500/5' : ''}`}
-                      >
-                        <td className='px-6 py-5 font-bold'>
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm ${isQ1 ? 'bg-amber-500/20 text-amber-400' : isEliminator ? 'bg-brand-500/20 text-brand-400' : 'text-slate-500'}`}>
-                              {idx + 1}
-                            </span>
-                            {isQ1 && <Crown className="w-4 h-4 text-amber-400 drop-shadow-md" />}
-                            {isEliminator && <Medal className="w-4 h-4 text-brand-400 drop-shadow-md" />}
-                          </div>
-                        </td>
-                        <td className='px-6 py-5'>
-                          <div className="flex items-center space-x-4">
-                            <TeamLogoBadge
-                              team={t}
-                              className={`w-10 h-10 rounded-full border-2 shadow-lg transition-transform group-hover:scale-110 overflow-hidden bg-gradient-to-br from-white/15 via-white/5 to-white/0 ${isTop4 ? 'border-white/20' : 'border-transparent'}`}
-                              imageClassName="w-7 h-7 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
-                            />
-                            <span className={`font-bold tracking-wide ${isTop4 ? 'text-white' : 'text-slate-400 group-hover:text-white transition-colors'}`}>{t.name}</span>
-                          </div>
-                        </td>
-                        <td className='px-6 py-5 text-center text-slate-400 font-semibold'>{stat.matches}</td>
-                        <td className='px-6 py-5 text-center text-green-400 font-bold'>{stat.wins}</td>
-                        <td className='px-6 py-5 text-center text-rose-400 font-bold'>{stat.losses}</td>
-                        <td className={`px-6 py-5 text-center font-black text-xl ${isTop4 ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'text-slate-300'}`}>{stat.points}</td>
-                        <td className={`px-6 py-5 text-center font-bold ${stat.nrr > 0 ? 'text-green-400' : 'text-rose-400'}`}>
-                          {stat.nrr > 0 ? '+' : ''}{stat.nrr.toFixed(3)}
-                        </td>
-                        <td className='px-6 py-5 text-center'>
-                          <div className="flex items-center justify-center space-x-3">
-                            <div className="w-24 bg-slate-900 rounded-full h-3 overflow-hidden shadow-inner relative">
-                              <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${actualChance}%` }}
-                                transition={{ duration: 1.5, ease: "easeOut" }}
-                                className={`h-full rounded-full overflow-hidden relative ${actualChance > 70 ? 'bg-gradient-to-r from-green-600 to-green-400' : actualChance > 30 ? 'bg-gradient-to-r from-amber-600 to-amber-400' : 'bg-gradient-to-r from-rose-600 to-rose-400'}`} 
-                              >
-                                <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_2s_linear_infinite] bg-[length:200%_auto]"></div>
-                              </motion.div>
-                            </div>
-                            <span className={`font-black w-12 text-right ${actualChance > 70 ? 'text-green-400' : actualChance > 30 ? 'text-amber-400' : 'text-rose-400'}`}>
-                              {isSimulating ? '...' : `${actualChance.toFixed(1)}%`}
-                            </span>
-                          </div>
-                        </td>
-                      </motion.tr>
-                    );
-                  })}
-                </AnimatePresence>
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-
-        {/* Key Insights */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className='grid grid-cols-1 md:grid-cols-3 gap-6 mt-12'
-        >
-          <div className='glass-card rounded-3xl p-8 relative overflow-hidden group hover:scale-[1.02] transition-transform'>
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-amber-500/20 blur-3xl rounded-full group-hover:bg-amber-500/30 transition-colors"></div>
-            <div className="flex items-center space-x-3 mb-6 relative z-10">
-              <div className="p-3 bg-amber-500/20 rounded-xl"><Crown className="w-6 h-6 text-amber-400" /></div>
-              <h3 className="text-white font-bold tracking-wide">Playoff Leader</h3>
+        {/* ── QUALIFICATION TABLE ── */}
+        <div className='mb-10'>
+          <p className='section-label mb-4'>QUALIFICATION PROBABILITIES — MONTE CARLO</p>
+          <div className='surface-card overflow-hidden'>
+            {/* Header */}
+            <div className='grid grid-cols-12 gap-2 px-4 py-3' style={{ borderBottom: '1px solid #1E2028', color: '#3D4356', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <div className='col-span-1'>#</div>
+              <div className='col-span-3'>Team</div>
+              <div className='col-span-1 text-center'>M</div>
+              <div className='col-span-1 text-center'>W</div>
+              <div className='col-span-1 text-center'>L</div>
+              <div className='col-span-2 text-center'>NRR</div>
+              <div className='col-span-1 text-center'>Pts</div>
+              <div className='col-span-2 text-center'>Qual %</div>
             </div>
-            <div className='text-5xl font-black text-white mb-2 relative z-10'>{playoffLeader}</div>
-            <div className='text-amber-400 font-bold relative z-10'>{isSimulating ? '...' : (mcProbabilities[playoffLeader] || 0).toFixed(1)}% chance to qualify</div>
-          </div>
 
-          <div className='glass-card rounded-3xl p-8 relative overflow-hidden group hover:scale-[1.02] transition-transform'>
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-brand-500/20 blur-3xl rounded-full group-hover:bg-brand-500/30 transition-colors"></div>
-            <div className="flex items-center space-x-3 mb-6 relative z-10">
-              <div className="p-3 bg-brand-500/20 rounded-xl"><AlertCircle className="w-6 h-6 text-brand-400" /></div>
-              <h3 className="text-white font-bold tracking-wide">In Contention</h3>
-            </div>
-            <div className='text-5xl font-black text-white mb-2 relative z-10'>{inContentionCount} <span className="text-2xl text-slate-400">Teams</span></div>
-            <div className='text-brand-400 font-bold relative z-10'>Still fighting for top 4</div>
-          </div>
+            {sortedTable.map((entry, idx) => {
+              const rank = idx + 1;
+              const isTop1 = rank === 1;
+              const isQualify = rank <= 4;
+              const isEliminated = rank >= 9;
+              const team = teamInfo[entry.team];
+              const chance = isSimulating ? 0 : (mcProbabilities[entry.team] || 0);
 
-          <div className='glass-card rounded-3xl p-8 relative overflow-hidden group hover:scale-[1.02] transition-transform'>
-            <div className="absolute -right-10 -top-10 w-40 h-40 bg-accent-500/20 blur-3xl rounded-full group-hover:bg-accent-500/30 transition-colors"></div>
-            <div className="flex items-center space-x-3 mb-6 relative z-10">
-              <div className="p-3 bg-accent-500/20 rounded-xl"><TrendingUp className="w-6 h-6 text-accent-400" /></div>
-              <h3 className="text-white font-bold tracking-wide">Monte Carlo Engine</h3>
-            </div>
-            <div className='text-5xl font-black text-white mb-2 relative z-10'>10,000</div>
-            <div className='text-accent-400 font-bold relative z-10'>Simulations run per refresh</div>
+              return (
+                <motion.div
+                  key={entry.team}
+                  layout
+                  layoutId={`analytics-row-${entry.team}`}
+                  className={`relative grid grid-cols-12 gap-2 px-4 py-3 pt-row ${isTop1 ? 'pt-row-gold' : isQualify ? 'pt-row-qualify' : ''} ${isEliminated ? 'pt-row-eliminated' : ''}`}
+                  style={{ borderBottom: '1px solid #1E2028' }}
+                >
+                  <span className='ghost-rank'>{rank}</span>
+                  <div className='col-span-1 flex items-center'>
+                    <span style={{ color: '#3D4356', fontSize: 13, fontWeight: 700 }}>{rank}</span>
+                  </div>
+                  <div className='col-span-3 flex items-center gap-2'>
+                    <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
+                      <img src={team.logo} alt={entry.team} className='w-full h-full object-contain' onError={(e) => { (e.target as HTMLImageElement).src = team.fallbackLogo || ''; }} />
+                    </div>
+                    <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{entry.team}</span>
+                  </div>
+                  <div className='col-span-1 text-center text-sm' style={{ color: '#8890A0' }}>{entry.matches}</div>
+                  <div className='col-span-1 text-center text-sm font-semibold' style={{ color: '#E8E8E8' }}>{entry.wins}</div>
+                  <div className='col-span-1 text-center text-sm' style={{ color: '#8890A0' }}>{entry.losses}</div>
+                  <div className={`col-span-2 text-center text-sm font-semibold ${entry.nrr >= 0 ? 'nrr-positive' : 'nrr-negative'}`}>
+                    {entry.nrr >= 0 ? '+' : ''}{entry.nrr.toFixed(3)}
+                  </div>
+                  <div className='col-span-1 text-center text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+                    {entry.points}
+                  </div>
+                  <div className='col-span-2 text-center'>
+                    <div className='flex items-center justify-center gap-2'>
+                      <div className='w-16 h-2 rounded' style={{ background: '#1A1D26' }}>
+                        <motion.div
+                          className='h-full rounded'
+                          initial={{ width: 0 }}
+                          animate={{ width: `${chance}%` }}
+                          transition={{ duration: 1.2, ease: 'easeOut' }}
+                          style={{ background: chance > 50 ? '#1D9E75' : chance > 10 ? '#D4AF37' : '#E8003D' }}
+                        />
+                      </div>
+                      <span className='text-sm font-bold' style={{ color: chance > 50 ? '#1D9E75' : chance > 10 ? '#D4AF37' : '#E8003D', minWidth: 42 }}>
+                        {isSimulating ? '...' : <AnimatedPercent value={chance} />}
+                      </span>
+                    </div>
+                  </div>
+                  {rank === 4 && (
+                    <motion.div
+                      className='cutoff-line absolute bottom-0 left-0 right-0'
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 0.6, delay: 0.4 }}
+                    />
+                  )}
+                </motion.div>
+              );
+            })}
           </div>
-        </motion.div>
+        </div>
+
+        {/* ── TEAM PROBABILITY CARDS ── */}
+        <div>
+          <p className='section-label mb-4'>TEAM QUALIFICATION OUTLOOK</p>
+          <div className='grid grid-cols-2 md:grid-cols-5 gap-3'>
+            {sortedTable.map((entry, idx) => {
+              const team = teamInfo[entry.team];
+              const chance = isSimulating ? 0 : (mcProbabilities[entry.team] || 0);
+              const isQualify = idx < 4;
+              return (
+                <motion.div
+                  key={entry.team}
+                  initial={{ y: 12, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className='surface-card p-4 text-center'
+                  style={{ borderLeft: `3px solid ${team.color}` }}
+                >
+                  <div className='flex items-center justify-center gap-2 mb-2'>
+                    <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
+                      <img src={team.logo} alt={entry.team} className='w-full h-full object-contain' onError={(e) => { (e.target as HTMLImageElement).src = team.fallbackLogo || ''; }} />
+                    </div>
+                    <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{entry.team}</span>
+                  </div>
+                  <div className='text-2xl font-bold' style={{
+                    fontFamily: 'var(--font-barlow)',
+                    color: chance > 50 ? '#1D9E75' : chance > 10 ? '#D4AF37' : '#E8003D'
+                  }}>
+                    {isSimulating ? '...' : <AnimatedPercent value={chance} />}
+                  </div>
+                  <p style={{ fontSize: 10, color: '#3D4356', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    {chance >= 99 ? 'QUALIFIED' : chance <= 1 ? 'ELIMINATED' : 'IN RACE'}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── KEY INSIGHTS ── */}
+        <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mt-10'>
+          <div className='surface-card p-6'>
+            <p className='section-label mb-2'>PLAYOFF LEADER</p>
+            <p className='text-3xl font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#D4AF37' }}>{sortedTable[0].team}</p>
+            <p style={{ color: '#8890A0', fontSize: 12, marginTop: 4 }}>
+              {isSimulating ? '...' : `${(mcProbabilities[sortedTable[0].team] || 0).toFixed(1)}% chance`}
+            </p>
+          </div>
+          <div className='surface-card p-6'>
+            <p className='section-label mb-2'>TEAMS IN CONTENTION</p>
+            <p className='text-3xl font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
+              {sortedTable.filter(t => { const c = mcProbabilities[t.team] || 0; return c > 0 && c < 100; }).length}
+            </p>
+            <p style={{ color: '#8890A0', fontSize: 12, marginTop: 4 }}>Still fighting for top 4</p>
+          </div>
+          <div className='surface-card p-6'>
+            <p className='section-label mb-2'>SIMULATIONS</p>
+            <p className='text-3xl font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>10,000</p>
+            <p style={{ color: '#8890A0', fontSize: 12, marginTop: 4 }}>Monte Carlo iterations per refresh</p>
+          </div>
+        </div>
       </div>
     </div>
   );
