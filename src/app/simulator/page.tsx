@@ -4,13 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
 import { teamInfo } from '@/data/mockData';
 import { Play, Calendar, TrendingUp, TrendingDown, RefreshCcw, Zap, Save, Download, Target, Sparkles } from 'lucide-react';
-import { Match, PointsTableEntry } from '@/types';
+import { Match, PointsTableEntry, Team } from '@/types';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { estimateWinProbability, estimateMargin, pickWeightedWinner } from '@/services/probability';
 
 type MarginType = 'runs' | 'wickets';
 interface SimulatedMatch {
-  matchId: number; mode: 'quick' | 'deep'; winner: string;
+  matchId: number; mode: 'quick' | 'deep'; winner: Team;
   marginType?: MarginType; marginValue?: number;
   t1Runs?: number; t1Overs?: number; t2Runs?: number; t2Overs?: number;
 }
