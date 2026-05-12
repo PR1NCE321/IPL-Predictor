@@ -1,6 +1,10 @@
-'use client';
+import dynamic from 'next/dynamic';
 
-export const dynamic = 'force-dynamic';
+const MatchesClient = dynamic(() => import('./MatchesClient'), { ssr: false });
+
+export default function Page() {
+  return <MatchesClient />;
+}
 
 import React from 'react';
 import { motion } from 'framer-motion';
