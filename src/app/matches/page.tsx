@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { teamInfo, getHistoricalWinProbability } from '@/data/mockData';
+import type { Team } from '@/types';
 import { Calendar, MapPin, ChevronDown, Clock, Timer, Flame } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { useState, useMemo } from 'react';
@@ -168,8 +169,8 @@ export default function MatchesPage() {
 
         {/* ══════ NEXT MATCH SPOTLIGHT ══════ */}
         {nextMatch && (activeTab === 'all' || activeTab === 'upcoming') && (() => {
-          const t1 = teamInfo[nextMatch.team1];
-          const t2 = teamInfo[nextMatch.team2];
+          const t1 = teamInfo[nextMatch.team1 as Team];
+          const t2 = teamInfo[nextMatch.team2 as Team];
           const isToday = nextMatch.date === today;
           const t1Prob = getHistoricalWinProbability(nextMatch.team1, nextMatch.team2);
           const t2Prob = 100 - t1Prob;
@@ -354,8 +355,8 @@ export default function MatchesPage() {
 function UpcomingCard({ match: m, idx, today, pointsTable, completedMatches }: {
   match: any; idx: number; today: string; pointsTable: any[]; completedMatches: any[];
 }) {
-  const t1 = teamInfo[m.team1];
-  const t2 = teamInfo[m.team2];
+  const t1 = teamInfo[m.team1 as Team];
+  const t2 = teamInfo[m.team2 as Team];
   const isToday = m.date === today;
   const t1Prob = getHistoricalWinProbability(m.team1, m.team2);
   const t2Prob = 100 - t1Prob;
@@ -480,8 +481,8 @@ function UpcomingCard({ match: m, idx, today, pointsTable, completedMatches }: {
 
 // ─── COMPLETED SCORECARD ───
 function CompletedRow({ match: m, allCompleted, idx }: { match: any; allCompleted: any[]; idx: number }) {
-  const t1 = teamInfo[m.team1];
-  const t2 = teamInfo[m.team2];
+  const t1 = teamInfo[m.team1 as Team];
+  const t2 = teamInfo[m.team2 as Team];
   const isT1Win = m.winner === m.team1;
   const isT2Win = m.winner === m.team2;
   const noResult = !m.winner;
