@@ -314,3 +314,43 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media (max-width: 768px) {
+  /* Safe area for bottom nav */
+  main { padding-bottom: 72px !important; }
+
+  /* Smaller headings */
+  h1 { font-size: 1.75rem !important; }
+
+  /* Table horizontal scroll wrapper */
+  .surface-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Smaller padding on cards */
+  .match-card, .surface-card, .elevated-card { padding: 12px; }
+
+  /* Ghost rank hidden on mobile */
+  .ghost-rank { display: none; }
+
+  /* Pill toggles scroll horizontally */
+  .pill-toggle { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .pill-toggle-item { padding: 6px 14px; font-size: 11px; white-space: nowrap; }
+
+  /* Simulate button smaller */
+  .btn-simulate { padding: 12px 16px; font-size: 14px; }
+
+  /* Section labels slightly bigger for readability */
+  .section-label { font-size: 9px; }
+
+  /* Points table rows */
+  .pt-row { font-size: 12px; }
+
+  /* Cutoff line */
+  .cutoff-line { height: 2px; }
+}
+
+/* Extra small screens */
+@media (max-width: 380px) {
+  h1 { font-size: 1.5rem !important; }
+  .pill-toggle-item { padding: 5px 10px; font-size: 10px; }
+}

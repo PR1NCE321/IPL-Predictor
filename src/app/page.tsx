@@ -33,7 +33,7 @@ export default function HomePage() {
   const recentCompleted = matches.filter(m => m.status === 'completed').slice(-3).reverse();
 
   return (
-    <div className='min-h-screen p-6 md:p-8'>
+    <div className='min-h-screen p-3 md:p-8'>
       <div className='max-w-6xl mx-auto'>
 
         {/* ── HEADER ── */}
@@ -148,7 +148,8 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className='surface-card overflow-hidden'>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+           <div style={{ minWidth: 600 }}>
             {/* Table Header */}
             <div className='grid grid-cols-12 gap-2 px-4 py-3' style={{ borderBottom: '1px solid #1E2028', color: '#3D4356', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
               <div className='col-span-1'>#</div>
@@ -214,6 +215,7 @@ export default function HomePage() {
                 </motion.div>
               );
             })}
+           </div>
           </div>
         </div>
 
