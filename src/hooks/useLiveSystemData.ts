@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useSyncExternalStore, useCallback } from 'react';
 import { Match, PointsTableEntry } from '@/types';
 import { getLiveSystemData } from '@/services/api';
 
@@ -11,7 +11,10 @@ interface LiveSystemDataState {
   isMockData: boolean;
 }
 
-const REFRESH_INTERVAL_MS = 30_000;
+// Poll every 5 minutes on the client side.
+// The server enforces a 30-minute hard cooldown on external CricAPI calls,
+// so more frequent client polls just return the cached server snapshot quickly.
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
 const CACHE_KEY = 'ipl_api_cache_v4';
 const CACHE_TIME_KEY = 'ipl_api_cache_time_v4';
 
@@ -48,7 +51,7 @@ function readCachedSnapshot(): LiveSystemDataState | null {
   }
 
   try {
-    const parsed = JSON.parse(cachedData) as { matches?: Match[]; pointsTable?: PointsTableEntry[] };
+    const parsed = JSON.parse(cachedData) as { matches?: Match[]; pointsTable?: PointsTableEntry[]; isMockData?: boolean };
     const parsedTime = Number(cachedTime);
 
     if (!Array.isArray(parsed.matches) || !Array.isArray(parsed.pointsTable) || Number.isNaN(parsedTime)) {
@@ -61,7 +64,7 @@ function readCachedSnapshot(): LiveSystemDataState | null {
       loading: false,
       error: null,
       lastUpdated: parsedTime,
-      isMockData: (parsed as any).isMockData ?? false,
+      isMockData: parsed.isMockData ?? false,
     };
   } catch {
     return null;
@@ -89,6 +92,12 @@ async function refreshLiveData(forceRefresh = false) {
     return inFlightRefresh;
   }
 
+  // Set loading state while fetching (but keep existing data visible)
+  if (!snapshot.matches) {
+    snapshot = { ...snapshot, loading: true };
+    emitChange();
+  }
+
   inFlightRefresh = (async () => {
     try {
       const data = await getLiveSystemData({ forceRefresh });
@@ -98,7 +107,7 @@ async function refreshLiveData(forceRefresh = false) {
         pointsTable: data.pointsTable,
         loading: false,
         error: null,
-        lastUpdated: Date.now(),
+        lastUpdated: (data as any).updatedAt ?? Date.now(),
         isMockData: data.isMockData ?? false,
       };
 
@@ -127,6 +136,7 @@ function initializeStore() {
 
   initialized = true;
 
+  // Immediately show cached data while fetching fresh data in background
   const cachedSnapshot = readCachedSnapshot();
   if (cachedSnapshot) {
     snapshot = cachedSnapshot;
@@ -135,14 +145,17 @@ function initializeStore() {
 
   void refreshLiveData(false);
 
+  // Poll every 5 minutes
   refreshTimer = globalThis.setInterval(() => {
     void refreshLiveData(false);
   }, REFRESH_INTERVAL_MS) as unknown as ReturnType<typeof globalThis.setInterval>;
 
+  // Force refresh on window focus (user came back to the tab)
   window.addEventListener('focus', () => {
     void refreshLiveData(true);
   });
 
+  // Sync across browser tabs via storage events
   window.addEventListener('storage', (event) => {
     if (event.key === CACHE_KEY || event.key === CACHE_TIME_KEY) {
       const updatedSnapshot = readCachedSnapshot();
@@ -165,10 +178,19 @@ function getSnapshot() {
   return snapshot;
 }
 
-export function useLiveSystemData(): LiveSystemDataState {
+/** Exported so components can trigger a manual refresh (e.g. a refresh button) */
+export function triggerManualRefresh() {
+  return refreshLiveData(true);
+}
+
+export function useLiveSystemData(): LiveSystemDataState & { refresh: () => Promise<void> } {
   useEffect(() => {
     initializeStore();
   }, []);
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+
+  const refresh = useCallback(() => refreshLiveData(true), []);
+
+  return { ...state, refresh };
 }

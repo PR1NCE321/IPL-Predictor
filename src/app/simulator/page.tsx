@@ -3,21 +3,27 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
 import { teamInfo } from '@/data/mockData';
-import { Play, Calendar, TrendingUp, TrendingDown, RefreshCcw, Zap, Save, Download, Target, Sparkles } from 'lucide-react';
-import { Match, PointsTableEntry, Team } from '@/types';
+import { Play, TrendingUp, TrendingDown, RefreshCcw, Zap, Save, Download, Sparkles, Trophy, Focus, ShieldAlert } from 'lucide-react';
+import { PointsTableEntry, Team } from '@/types';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { estimateWinProbability, estimateMargin, pickWeightedWinner } from '@/services/probability';
 
 type MarginType = 'runs' | 'wickets';
 interface SimulatedMatch {
-  matchId: number; mode: 'quick' | 'deep'; winner: Team;
-  marginType?: MarginType; marginValue?: number;
-  t1Runs?: number; t1Overs?: number; t2Runs?: number; t2Overs?: number;
+  matchId: number;
+  mode: 'quick' | 'deep';
+  winner: Team;
+  marginType?: MarginType;
+  marginValue?: number;
+  t1Runs?: number;
+  t1Overs?: number;
+  t2Runs?: number;
+  t2Overs?: number;
 }
 
 export default function SimulatorPage() {
   const { matches, pointsTable: baseTable, loading } = useLiveSystemData();
-  const liveMatches = matches?.filter((m) => m.status === 'pending') ?? null;
+  const liveMatches = useMemo(() => matches?.filter((m) => m.status === 'pending') ?? null, [matches]);
 
   const [selectedMatch, setSelectedMatch] = useState<number | null>(null);
   const [simulatedMatches, setSimulatedMatches] = useState<Record<number, SimulatedMatch>>({});
@@ -27,8 +33,10 @@ export default function SimulatorPage() {
   const [selectedWinner, setSelectedWinner] = useState<Team | null>(null);
   const [marginType, setMarginType] = useState<MarginType>('runs');
   const [marginValue, setMarginValue] = useState<string>('');
-  const [t1Runs, setT1Runs] = useState(''); const [t1Overs, setT1Overs] = useState('20');
-  const [t2Runs, setT2Runs] = useState(''); const [t2Overs, setT2Overs] = useState('20');
+  const [t1Runs, setT1Runs] = useState('');
+  const [t1Overs, setT1Overs] = useState('20');
+  const [t2Runs, setT2Runs] = useState('');
+  const [t2Overs, setT2Overs] = useState('20');
 
   const currentMatch = (selectedMatch !== null && liveMatches) ? liveMatches[selectedMatch] : null;
 
@@ -43,24 +51,55 @@ export default function SimulatorPage() {
     const match = liveMatches[idx];
     if (simulatedMatches[match.id]) {
       const sim = simulatedMatches[match.id];
-      setSelectedWinner(sim.winner); setSimMode(sim.mode);
-      if (sim.mode === 'quick') { setMarginType(sim.marginType || 'runs'); setMarginValue(sim.marginValue?.toString() || ''); }
-      else { setT1Runs(sim.t1Runs?.toString() || ''); setT1Overs(sim.t1Overs?.toString() || '20'); setT2Runs(sim.t2Runs?.toString() || ''); setT2Overs(sim.t2Overs?.toString() || '20'); }
-    } else { setSelectedWinner(null); setMarginType('runs'); setMarginValue(''); setT1Runs(''); setT2Runs(''); setT1Overs('20'); setT2Overs('20'); }
+      setSelectedWinner(sim.winner);
+      setSimMode(sim.mode);
+      if (sim.mode === 'quick') {
+        setMarginType(sim.marginType || 'runs');
+        setMarginValue(sim.marginValue?.toString() || '');
+      } else {
+        setT1Runs(sim.t1Runs?.toString() || '');
+        setT1Overs(sim.t1Overs?.toString() || '20');
+        setT2Runs(sim.t2Runs?.toString() || '');
+        setT2Overs(sim.t2Overs?.toString() || '20');
+      }
+    } else {
+      setSelectedWinner(null);
+      setMarginType('runs');
+      setMarginValue('');
+      setT1Runs('');
+      setT2Runs('');
+      setT1Overs('20');
+      setT2Overs('20');
+    }
   };
 
   const applySimulation = (winner: Team, mType: MarginType, mValue: number) => {
     if (!currentMatch) return;
-    setSimulatedMatches(prev => ({ ...prev, [currentMatch.id]: { matchId: currentMatch.id, mode: 'quick', winner, marginType: mType, marginValue: mValue } }));
+    setSimulatedMatches(prev => ({
+      ...prev,
+      [currentMatch.id]: { matchId: currentMatch.id, mode: 'quick', winner, marginType: mType, marginValue: mValue }
+    }));
     const nextIdx = liveMatches!.findIndex(m => m.id !== currentMatch.id && !simulatedMatches[m.id]);
     if (nextIdx !== -1) handleSelectMatch(nextIdx); else setSelectedMatch(null);
   };
 
   const saveSimulation = () => {
     if (!currentMatch) return;
-    if (simMode === 'quick' && selectedWinner && marginValue) { applySimulation(selectedWinner, marginType, parseInt(marginValue) || 0); }
-    else if (simMode === 'deep' && selectedWinner && t1Runs && t2Runs) {
-      setSimulatedMatches(prev => ({ ...prev, [currentMatch.id]: { matchId: currentMatch.id, mode: 'deep', winner: selectedWinner, t1Runs: parseInt(t1Runs), t1Overs: parseFloat(t1Overs), t2Runs: parseInt(t2Runs), t2Overs: parseFloat(t2Overs) } }));
+    if (simMode === 'quick' && selectedWinner && marginValue) {
+      applySimulation(selectedWinner, marginType, parseInt(marginValue) || 0);
+    } else if (simMode === 'deep' && selectedWinner && t1Runs && t2Runs) {
+      setSimulatedMatches(prev => ({
+        ...prev,
+        [currentMatch.id]: {
+          matchId: currentMatch.id,
+          mode: 'deep',
+          winner: selectedWinner,
+          t1Runs: parseInt(t1Runs),
+          t1Overs: parseFloat(t1Overs),
+          t2Runs: parseInt(t2Runs),
+          t2Overs: parseFloat(t2Overs)
+        }
+      }));
       const nextIdx = liveMatches!.findIndex(m => m.id !== currentMatch.id && !simulatedMatches[m.id]);
       if (nextIdx !== -1) handleSelectMatch(nextIdx); else setSelectedMatch(null);
     }
@@ -76,14 +115,18 @@ export default function SimulatorPage() {
         newSims[match.id] = { matchId: match.id, mode: 'quick', winner, marginType: margin.marginType, marginValue: margin.marginValue };
       }
     });
-    setSimulatedMatches(newSims); setSelectedMatch(null);
+    setSimulatedMatches(newSims);
+    setSelectedMatch(null);
   };
 
   const smartSimulateCurrent = () => {
     if (!currentMatch) return;
     const winner = pickWeightedWinner(currentMatch, baseTable || []);
     const margin = estimateMargin(currentMatch, winner);
-    setSelectedWinner(winner); setSimMode('quick'); setMarginType(margin.marginType); setMarginValue(String(margin.marginValue));
+    setSelectedWinner(winner);
+    setSimMode('quick');
+    setMarginType(margin.marginType);
+    setMarginValue(String(margin.marginValue));
     applySimulation(winner, margin.marginType, margin.marginValue);
   };
 
@@ -95,7 +138,8 @@ export default function SimulatorPage() {
       const match = liveMatches.find(m => m.id === sim.matchId);
       if (!match) return;
       const loser = match.team1 === sim.winner ? match.team2 : match.team1;
-      const we = tableMap[sim.winner]; const le = tableMap[loser];
+      const we = tableMap[sim.winner];
+      const le = tableMap[loser];
       if (sim.mode === 'quick') {
         const d = sim.marginType === 'runs' ? (sim.marginValue || 0) / 20 : (sim.marginValue || 0) * 0.35;
         if (we) { const o = we.nrr * we.matches; we.matches += 1; we.wins += 1; we.points += 2; we.nrr = (o + d) / we.matches; }
@@ -104,8 +148,18 @@ export default function SimulatorPage() {
         const r1 = sim.t1Runs || 0, o1 = sim.t1Overs || 20, r2 = sim.t2Runs || 0, o2 = sim.t2Overs || 20;
         const isT1W = sim.winner === match.team1;
         const e1 = tableMap[match.team1], e2 = tableMap[match.team2];
-        if (e1) { const oo = e1.matches*20, or = 160*e1.matches, orc = oo*((or/oo)-e1.nrr); e1.nrr = ((or+r1)/(oo+o1))-((orc+r2)/(oo+o2)); e1.matches+=1; if(isT1W){e1.wins+=1;e1.points+=2;}else{e1.losses+=1;} }
-        if (e2) { const oo = e2.matches*20, or = 160*e2.matches, orc = oo*((or/oo)-e2.nrr); e2.nrr = ((or+r2)/(oo+o2))-((orc+r1)/(oo+o1)); e2.matches+=1; if(!isT1W){e2.wins+=1;e2.points+=2;}else{e2.losses+=1;} }
+        if (e1) {
+          const oo = e1.matches * 20, or = 160 * e1.matches, orc = oo * ((or / oo) - e1.nrr);
+          e1.nrr = ((or + r1) / (oo + o1)) - ((orc + r2) / (oo + o2));
+          e1.matches += 1;
+          if (isT1W) { e1.wins += 1; e1.points += 2; } else { e1.losses += 1; }
+        }
+        if (e2) {
+          const oo = e2.matches * 20, or = 160 * e2.matches, orc = oo * ((or / oo) - e2.nrr);
+          e2.nrr = ((or + r2) / (oo + o2)) - ((orc + r1) / (oo + o1));
+          e2.matches += 1;
+          if (!isT1W) { e2.wins += 1; e2.points += 2; } else { e2.losses += 1; }
+        }
       }
     });
     return Object.values(tableMap).sort((a, b) => b.points !== a.points ? b.points - a.points : b.nrr - a.nrr);
@@ -118,302 +172,643 @@ export default function SimulatorPage() {
   };
 
   if (loading || !liveMatches || !baseTable) {
-    return <div className='min-h-screen p-8'><div className='max-w-5xl mx-auto space-y-3'>{Array.from({length:8}).map((_,i)=><div key={i} className='skeleton h-14 w-full'/>)}</div></div>;
+    return (
+      <div className='min-h-screen p-8 flex items-center justify-center'>
+        <div className='w-full max-w-4xl space-y-4'>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className='skeleton h-16 w-full rounded-xl' style={{ background: '#1A1D26' }} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const isSimActive = Object.keys(simulatedMatches).length > 0;
+  const simulatedCount = Object.keys(simulatedMatches).length;
+  const totalMatches = liveMatches.length;
+  const progressPercent = totalMatches > 0 ? (simulatedCount / totalMatches) * 100 : 0;
 
   return (
-    <div className='min-h-screen p-6 md:p-8'>
-      <div className='max-w-6xl mx-auto'>
-        <motion.div initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }} className='mb-6'>
-          <p className='section-label mb-2'>IPL 2026</p>
-          <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>MATCH SIMULATOR</h1>
-        </motion.div>
+    <div className='min-h-screen p-4 md:p-8 relative overflow-hidden'>
+      {/* Premium ambient animated blobs for rich aesthetics */}
+      <div className='absolute top-10 left-1/4 w-96 h-96 rounded-full bg-amber-500/5 blur-[120px] pointer-events-none animate-pulse' />
+      <div className='absolute bottom-10 right-10 w-96 h-96 rounded-full bg-emerald-500/5 blur-[120px] pointer-events-none' />
 
-        {/* Action Bar */}
-        <div className='flex flex-wrap gap-2 mb-6'>
-          <button onClick={autoSimulateAll} className='btn-simulate' style={{ width: 'auto', padding: '10px 20px', fontSize: 13 }}>
-            <Zap size={14} className='inline mr-2' />AUTO-SIMULATE ALL
-          </button>
-          <button onClick={() => { localStorage.setItem('ipl_simulator_scenario_v1', JSON.stringify(simulatedMatches)); setHasSavedScenario(true); }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#8890A0' }}>
-            <Save size={13} className='inline mr-1' /> Save
-          </button>
-          {hasSavedScenario && <button onClick={() => { const s = localStorage.getItem('ipl_simulator_scenario_v1'); if(s) { setSimulatedMatches(JSON.parse(s)); setSelectedMatch(null); } }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#8890A0' }}><Download size={13} className='inline mr-1' /> Load</button>}
-          {isSimActive && <button onClick={() => { setSimulatedMatches({}); setSelectedMatch(null); }} className='px-4 py-2 text-sm font-semibold rounded' style={{ background: 'rgba(232,0,61,0.1)', border: '1px solid rgba(232,0,61,0.2)', color: '#E8003D' }}><RefreshCcw size={13} className='inline mr-1' /> Reset</button>}
+      <div className='max-w-7xl mx-auto space-y-8 relative z-10'>
+        {/* Header Section */}
+        <div className='flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#1E2028] pb-6'>
+          <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.5 }}>
+            <div className='flex items-center gap-2 mb-1.5'>
+              <span className='px-2.5 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20'>
+                Interactive Engine
+              </span>
+              <span className='text-xs font-semibold text-[#8890A0]'>IPL Playoff Simulator</span>
+            </div>
+            <h1 className='text-3xl md:text-5xl font-black tracking-tight text-[#E8E8E8]' style={{ fontFamily: 'var(--font-barlow)' }}>
+              CUSTOM SCENARIO BUILDER
+            </h1>
+          </motion.div>
+
+          {/* Premium Control Hub */}
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className='flex flex-wrap items-center gap-2'
+          >
+            <motion.button
+              whileHover={{ scale: 1.02, boxShadow: '0 0 15px rgba(212,175,55,0.4)' }}
+              whileTap={{ scale: 0.98 }}
+              onClick={autoSimulateAll}
+              className='relative flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs uppercase tracking-wider text-[#0D0F14] bg-gradient-to-r from-[#D4AF37] to-[#e6c85e] shadow-lg overflow-hidden'
+              style={{ fontFamily: 'var(--font-barlow)' }}
+            >
+              <Sparkles size={14} className='animate-spin' style={{ animationDuration: '4s' }} />
+              Auto-Simulate All
+            </motion.button>
+
+            <div className='flex items-center rounded-lg p-1 bg-[#111318] border border-[#1E2028]'>
+              <button
+                onClick={() => {
+                  localStorage.setItem('ipl_simulator_scenario_v1', JSON.stringify(simulatedMatches));
+                  setHasSavedScenario(true);
+                }}
+                className='flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#8890A0] hover:text-[#E8E8E8] hover:bg-[#1A1D26] transition-all'
+              >
+                <Save size={13} /> Save
+              </button>
+              {hasSavedScenario && (
+                <button
+                  onClick={() => {
+                    const s = localStorage.getItem('ipl_simulator_scenario_v1');
+                    if (s) { setSimulatedMatches(JSON.parse(s)); setSelectedMatch(null); }
+                  }}
+                  className='flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#D4AF37] hover:bg-[#D4AF37]/10 transition-all'
+                >
+                  <Download size={13} /> Load
+                </button>
+              )}
+              {isSimActive && (
+                <button
+                  onClick={() => { setSimulatedMatches({}); setSelectedMatch(null); }}
+                  className='flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#E8003D] hover:bg-[#E8003D]/10 transition-all'
+                >
+                  <RefreshCcw size={13} /> Reset
+                </button>
+              )}
+            </div>
+          </motion.div>
         </div>
 
         <div className='grid grid-cols-1 lg:grid-cols-12 gap-6'>
-          {/* Fixtures Sidebar */}
-          <div className='lg:col-span-4'>
-            <div className='surface-card p-4' style={{ maxHeight: 700, overflowY: 'auto' }}>
-              <div className='flex items-center justify-between mb-2'>
-                <p className='section-label'>FIXTURES</p>
-                <span style={{ fontSize: 11, color: '#D4AF37', fontWeight: 700 }}>{Object.keys(simulatedMatches).length}/{liveMatches.length}</span>
-              </div>
-              {/* Progress Bar */}
-              <div className='mb-3'>
-                <div className='w-full h-1.5 rounded-full' style={{ background: '#1E2028' }}>
-                  <motion.div className='h-full rounded-full' style={{ background: 'linear-gradient(90deg, #D4AF37, #1D9E75)' }}
-                    initial={{ width: 0 }} animate={{ width: `${(Object.keys(simulatedMatches).length / Math.max(liveMatches.length, 1)) * 100}%` }}
-                    transition={{ type: 'spring', stiffness: 100, damping: 20 }} />
+          {/* LEFT RAIL: Interactive Fixture Picker */}
+          <div className='lg:col-span-4 flex flex-col gap-4'>
+            <div className='rounded-xl border border-[#1E2028] bg-[#111318]/90 backdrop-blur-md p-4 shadow-xl flex flex-col gap-3'>
+              {/* Fixture status panel */}
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-[11px] font-bold tracking-wider text-[#8890A0] uppercase'>Pending Matches</span>
+                  <span className='text-xs font-bold px-2 py-0.5 rounded bg-[#1A1D26] text-[#E8E8E8]'>
+                    {simulatedCount} / {totalMatches}
+                  </span>
                 </div>
+                {progressPercent === 100 && (
+                  <span className='flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20'>
+                    <Trophy size={10} /> Complete
+                  </span>
+                )}
               </div>
-              <div className='mb-3'>
-                <select value={targetTeam} onChange={(e) => setTargetTeam(e.target.value)} className='w-full py-2 px-3 text-xs font-semibold rounded' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none' }}>
-                  <option value="NONE">Focus: All Teams</option>
-                  {Object.entries(teamInfo).map(([k, t]) => <option key={k} value={k}>{t.name}</option>)}
+
+              {/* Enhanced animated progress track */}
+              <div className='h-2 rounded-full bg-[#1A1D26] overflow-hidden p-0.5 border border-[#1E2028]'>
+                <motion.div
+                  className='h-full rounded-full bg-gradient-to-r from-[#D4AF37] via-amber-400 to-emerald-500'
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+                />
+              </div>
+
+              {/* Target filter selection */}
+              <div className='relative'>
+                <select
+                  value={targetTeam}
+                  onChange={(e) => setTargetTeam(e.target.value)}
+                  className='w-full py-2 pl-8 pr-3 text-xs font-semibold rounded-lg bg-[#0D0F14] border border-[#1E2028] text-[#E8E8E8] focus:border-[#D4AF37] outline-none transition-colors appearance-none cursor-pointer'
+                >
+                  <option value="NONE">⚡ Filter: Show All Teams</option>
+                  {Object.entries(teamInfo).map(([k, t]) => (
+                    <option key={k} value={k}>{t.name} ({k})</option>
+                  ))}
                 </select>
+                <Focus size={13} className='absolute left-2.5 top-3 text-[#8890A0] pointer-events-none' />
               </div>
-              <div className='space-y-2'>
-                {liveMatches.map((match, idx) => {
-                  const sim = simulatedMatches[match.id];
-                  const isSelected = selectedMatch === idx;
-                  const involvesTarget = targetTeam !== 'NONE' && (match.team1 === targetTeam || match.team2 === targetTeam);
-                  const t1 = teamInfo[match.team1]; const t2 = teamInfo[match.team2];
-                  return (
-                    <motion.button key={match.id} onClick={() => handleSelectMatch(idx)}
-                      whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}
-                      className='w-full text-left p-3 rounded transition-all' style={{
-                      background: isSelected ? 'rgba(212,175,55,0.08)' : sim ? 'rgba(29,158,117,0.06)' : involvesTarget ? 'rgba(212,175,55,0.04)' : '#111318',
-                      border: `1px solid ${isSelected ? 'rgba(212,175,55,0.3)' : sim ? 'rgba(29,158,117,0.2)' : '#1E2028'}`,
-                      borderLeft: sim ? `3px solid ${teamInfo[sim.winner]?.color || '#1D9E75'}` : isSelected ? '3px solid #D4AF37' : undefined,
-                    }}>
-                      <div className='flex items-center justify-between mb-1.5'>
-                        <span style={{ fontSize: 10, color: sim ? '#1D9E75' : '#3D4356', fontWeight: 700 }}>M{match.matchNumber}</span>
-                        {sim && <span className='px-1.5 py-0.5 rounded' style={{ fontSize: 8, background: 'rgba(29,158,117,0.1)', color: '#1D9E75', fontWeight: 700 }}>SIMULATED</span>}
+            </div>
+
+            {/* Match List Scrollbox */}
+            <div className='flex-1 rounded-xl border border-[#1E2028] bg-[#111318]/40 backdrop-blur-sm p-2 overflow-y-auto max-h-[620px] space-y-2 custom-scrollbar'>
+              {liveMatches.map((match, idx) => {
+                const sim = simulatedMatches[match.id];
+                const isSelected = selectedMatch === idx;
+                const involvesTarget = targetTeam !== 'NONE' && (match.team1 === targetTeam || match.team2 === targetTeam);
+                const t1 = teamInfo[match.team1];
+                const t2 = teamInfo[match.team2];
+
+                return (
+                  <motion.div
+                    key={match.id}
+                    layoutId={`match-card-${match.id}`}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.02 }}
+                  >
+                    <motion.button
+                      onClick={() => handleSelectMatch(idx)}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className='w-full text-left p-3 rounded-lg transition-all relative overflow-hidden group border'
+                      style={{
+                        background: isSelected 
+                          ? 'linear-gradient(135deg, rgba(212,175,55,0.12), rgba(212,175,55,0.03))' 
+                          : sim 
+                          ? 'rgba(17,24,39,0.7)' 
+                          : involvesTarget 
+                          ? 'rgba(212,175,55,0.03)' 
+                          : '#111318',
+                        borderColor: isSelected 
+                          ? '#D4AF37' 
+                          : sim 
+                          ? 'rgba(29,158,117,0.3)' 
+                          : involvesTarget 
+                          ? 'rgba(212,175,55,0.2)' 
+                          : '#1E2028',
+                      }}
+                    >
+                      {/* Left color bar highlight */}
+                      <div 
+                        className='absolute left-0 top-0 bottom-0 w-1 transition-all'
+                        style={{
+                          background: isSelected ? '#D4AF37' : sim ? teamInfo[sim.winner]?.color || '#1D9E75' : 'transparent'
+                        }}
+                      />
+
+                      <div className='flex items-center justify-between mb-2 pl-1'>
+                        <span className='text-[10px] font-bold text-[#8890A0] tracking-wider'>
+                          MATCH {match.matchNumber}
+                        </span>
+                        {sim ? (
+                          <span className='px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1'>
+                            ✓ SIMULATED
+                          </span>
+                        ) : isSelected ? (
+                          <span className='px-2 py-0.5 rounded text-[9px] font-bold bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 flex items-center gap-1 animate-pulse'>
+                            ● EDITING
+                          </span>
+                        ) : null}
                       </div>
-                      <div className='flex items-center justify-between'>
-                        <div className='flex items-center gap-1.5'>
-                          <div className='w-5 h-5 rounded-full overflow-hidden border' style={{ borderColor: sim?.winner === match.team1 ? '#D4AF37' : '#1E2028', background: '#0D0F14' }}>
-                            <img src={t1.captain?.image} alt={match.team1} className='w-full h-full object-cover'
-                              onError={(e) => { (e.target as HTMLImageElement).src = t1.captain?.fallbackImage || ''; }} />
+
+                      {/* Teams display */}
+                      <div className='flex items-center justify-between px-1'>
+                        {/* Team 1 */}
+                        <div className='flex items-center gap-2'>
+                          <div className='w-6 h-6 rounded-full overflow-hidden bg-[#0D0F14] border border-[#1E2028] p-0.5 shrink-0'>
+                            <img src={t1.logo} alt={t1.shortName} className='w-full h-full object-contain' />
                           </div>
-                          <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
-                            <img src={t1.logo} alt={match.team1} className='w-full h-full object-contain' />
-                          </div>
-                          <span className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: sim?.winner === match.team1 ? '#D4AF37' : '#8890A0' }}>{match.team1}</span>
+                          <span 
+                            className='font-bold text-sm tracking-wide transition-colors' 
+                            style={{ 
+                              fontFamily: 'var(--font-barlow)', 
+                              color: sim?.winner === match.team1 ? '#D4AF37' : isSelected ? '#E8E8E8' : '#8890A0' 
+                            }}
+                          >
+                            {match.team1}
+                          </span>
                         </div>
-                        <span style={{ color: '#3D4356', fontSize: 9, fontWeight: 700 }}>vs</span>
-                        <div className='flex items-center gap-1.5'>
-                          <span className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: sim?.winner === match.team2 ? '#D4AF37' : '#8890A0' }}>{match.team2}</span>
-                          <div className='w-4 h-4 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
-                            <img src={t2.logo} alt={match.team2} className='w-full h-full object-contain' />
+
+                        <span className='text-[10px] font-extrabold text-[#3D4356] italic px-1'>VS</span>
+
+                        {/* Team 2 */}
+                        <div className='flex items-center gap-2 flex-row-reverse'>
+                          <div className='w-6 h-6 rounded-full overflow-hidden bg-[#0D0F14] border border-[#1E2028] p-0.5 shrink-0'>
+                            <img src={t2.logo} alt={t2.shortName} className='w-full h-full object-contain' />
                           </div>
-                          <div className='w-5 h-5 rounded-full overflow-hidden border' style={{ borderColor: sim?.winner === match.team2 ? '#D4AF37' : '#1E2028', background: '#0D0F14' }}>
-                            <img src={t2.captain?.image} alt={match.team2} className='w-full h-full object-cover'
-                              onError={(e) => { (e.target as HTMLImageElement).src = t2.captain?.fallbackImage || ''; }} />
-                          </div>
+                          <span 
+                            className='font-bold text-sm tracking-wide transition-colors' 
+                            style={{ 
+                              fontFamily: 'var(--font-barlow)', 
+                              color: sim?.winner === match.team2 ? '#D4AF37' : isSelected ? '#E8E8E8' : '#8890A0' 
+                            }}
+                          >
+                            {match.team2}
+                          </span>
                         </div>
                       </div>
-                      {sim && <p style={{ fontSize: 9, color: '#1D9E75', marginTop: 4, textAlign: 'center' }}>{sim.winner} +{sim.marginValue} {sim.marginType}</p>}
+
+                      {/* Simulation result summary string */}
+                      {sim && (
+                        <div className='mt-2.5 pt-1.5 border-t border-[#1E2028]/60 flex items-center justify-center gap-1 text-[11px] text-emerald-400 font-semibold'>
+                          <span>{sim.winner} wins by</span>
+                          <span className='font-bold text-[#E8E8E8]'>{sim.marginValue} {sim.marginType}</span>
+                        </div>
+                      )}
                     </motion.button>
-                  );
-                })}
-              </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Control Panel + Table */}
-          <div className='lg:col-span-8 space-y-6'>
-            {/* Control Panel */}
-            <div className='surface-card p-6'>
+          {/* RIGHT RAIL: Simulator Deck & Projected Live Standings Table */}
+          <div className='lg:col-span-8 flex flex-col gap-6'>
+            {/* Dynamic Controls Simulator Module */}
+            <AnimatePresence mode='wait'>
               {currentMatch ? (
-                <>
-                  <p className='section-label mb-4'>SIMULATE MATCH {currentMatch.matchNumber} — {currentMatch.team1} vs {currentMatch.team2}</p>
-                  {/* Win Probability Bar */}
+                <motion.div
+                  key={currentMatch.id}
+                  initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.98, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className='rounded-xl border border-[#D4AF37]/30 bg-gradient-to-b from-[#111318] to-[#0D0F14] p-5 shadow-2xl relative overflow-hidden'
+                >
+                  <div className='absolute top-0 right-0 px-4 py-1 bg-[#D4AF37]/10 border-b border-l border-[#D4AF37]/20 rounded-bl-xl text-[10px] font-bold text-[#D4AF37] tracking-wider'>
+                    Active Simulator Deck
+                  </div>
+
+                  <span className='text-[10px] font-bold text-[#8890A0] uppercase tracking-widest block mb-4'>
+                    CONFIGURE RESULT: MATCH {currentMatch.matchNumber}
+                  </span>
+
+                  {/* Gorgeous visual Win Probability Bar */}
                   {(() => {
                     const probs = estimateWinProbability(currentMatch, baseTable || []);
-                    const prob1 = Math.round(probs[currentMatch.team1] || 50);
-                    const prob2 = Math.round(probs[currentMatch.team2] || 50);
-                    const ti1 = teamInfo[currentMatch.team1]; const ti2 = teamInfo[currentMatch.team2];
+                    const p1 = Math.round(probs[currentMatch.team1] || 50);
+                    const p2 = Math.round(probs[currentMatch.team2] || 50);
+                    const ti1 = teamInfo[currentMatch.team1];
+                    const ti2 = teamInfo[currentMatch.team2];
+
                     return (
-                      <div className='mb-4 p-3 rounded' style={{ background: '#0D0F14', border: '1px solid #1E2028' }}>
-                        <div className='flex justify-between mb-1'>
-                          <span style={{ fontSize: 10, color: '#E8E8E8', fontWeight: 700 }}>{prob1}%</span>
-                          <span style={{ fontSize: 8, color: '#3D4356', letterSpacing: '0.1em', textTransform: 'uppercase' }}>AI WIN PREDICTION</span>
-                          <span style={{ fontSize: 10, color: '#E8E8E8', fontWeight: 700 }}>{prob2}%</span>
+                      <div className='mb-6 p-3 rounded-lg bg-[#0D0F14] border border-[#1E2028] space-y-1.5'>
+                        <div className='flex justify-between items-center text-xs'>
+                          <span className='font-bold text-[#E8E8E8]' style={{ color: ti1.color }}>{currentMatch.team1} {p1}%</span>
+                          <span className='text-[9px] font-bold text-[#3D4356] tracking-widest uppercase'>Historical+Form Signal</span>
+                          <span className='font-bold text-[#E8E8E8]' style={{ color: ti2.color }}>{p2}% {currentMatch.team2}</span>
                         </div>
-                        <div className='flex rounded overflow-hidden' style={{ height: 6 }}>
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${prob1}%` }} transition={{ type: 'spring', stiffness: 150, damping: 20 }}
-                            style={{ background: ti1.color }} />
-                          <motion.div initial={{ width: 0 }} animate={{ width: `${prob2}%` }} transition={{ type: 'spring', stiffness: 150, damping: 20 }}
-                            style={{ background: ti2.color }} />
+                        <div className='h-2.5 rounded-full overflow-hidden flex bg-[#1A1D26] p-0.5 gap-0.5 border border-[#1E2028]'>
+                          <motion.div 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${p1}%` }} 
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                            className='h-full rounded-l-full' 
+                            style={{ background: ti1.color }} 
+                          />
+                          <motion.div 
+                            initial={{ width: 0 }} 
+                            animate={{ width: `${p2}%` }} 
+                            transition={{ duration: 0.5, ease: 'easeOut' }}
+                            className='h-full rounded-r-full' 
+                            style={{ background: ti2.color }} 
+                          />
                         </div>
                       </div>
                     );
                   })()}
-                  <div className='grid grid-cols-2 gap-4 mb-4'>
+
+                  {/* Interactive Winner Choice Grid */}
+                  <div className='grid grid-cols-2 gap-4 mb-6'>
                     {[currentMatch.team1, currentMatch.team2].map(team => {
                       const ti = teamInfo[team];
                       const isSelected = selectedWinner === team;
+
                       return (
-                        <motion.button key={team} onClick={() => setSelectedWinner(team)}
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                          className='p-4 rounded text-center transition-all flex flex-col items-center gap-2' style={{
-                          background: isSelected ? 'rgba(212,175,55,0.1)' : '#0D0F14',
-                          border: `2px solid ${isSelected ? '#D4AF37' : '#1E2028'}`,
-                        }}>
-                          <motion.div className='w-16 h-16 rounded-full overflow-hidden border-2'
-                            animate={{ borderColor: isSelected ? '#D4AF37' : ti.color, scale: isSelected ? 1.05 : 1 }}
-                            style={{ background: '#0D0F14' }}>
-                            <img src={ti.captain?.image} alt={ti.captain?.name} className='w-full h-full object-cover'
-                              onError={(e) => { (e.target as HTMLImageElement).src = ti.captain?.fallbackImage || ''; }} />
-                          </motion.div>
-                          <div className='flex items-center gap-1'>
-                            <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 1 }}>
-                              <img src={ti.logo} alt={team} className='w-full h-full object-contain' />
-                            </div>
-                            <span className='font-bold' style={{ fontFamily: 'var(--font-barlow)', fontSize: 18, color: isSelected ? '#D4AF37' : '#8890A0' }}>{team}</span>
+                        <motion.button
+                          key={team}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => setSelectedWinner(team)}
+                          className='p-4 rounded-xl border text-center relative flex flex-col items-center gap-3 cursor-pointer transition-all overflow-hidden group'
+                          style={{
+                            background: isSelected ? 'rgba(212,175,55,0.08)' : '#111318',
+                            borderColor: isSelected ? '#D4AF37' : '#1E2028',
+                            boxShadow: isSelected ? '0 8px 25px rgba(212,175,55,0.15)' : 'none'
+                          }}
+                        >
+                          {/* Inner gold glow header background */}
+                          {isSelected && (
+                            <motion.div 
+                              layoutId='active-team-backdrop'
+                              className='absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-[#D4AF37]/5 pointer-events-none'
+                            />
+                          )}
+
+                          <div className='w-16 h-16 rounded-full bg-[#0D0F14] border-2 flex items-center justify-center p-2 relative shadow-inner transition-colors' style={{ borderColor: isSelected ? '#D4AF37' : ti.color }}>
+                            <img src={ti.logo} alt={team} className='w-full h-full object-contain group-hover:scale-110 transition-transform' />
+                            {isSelected && (
+                              <motion.span 
+                                initial={{ scale: 0 }} 
+                                animate={{ scale: 1 }} 
+                                className='absolute -top-1 -right-1 w-5 h-5 bg-[#D4AF37] text-[#0D0F14] rounded-full flex items-center justify-center text-xs font-black shadow-md'
+                              >
+                                ✓
+                              </motion.span>
+                            )}
                           </div>
-                          <span style={{ fontSize: 10, color: '#3D4356' }}>{ti.captain?.name}</span>
-                          {isSelected && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className='text-xs font-bold' style={{ color: '#D4AF37' }}>WINNER ✓</motion.span>}
+
+                          <div>
+                            <span className='font-black text-xl tracking-wide block' style={{ fontFamily: 'var(--font-barlow)', color: isSelected ? '#D4AF37' : '#E8E8E8' }}>
+                              {ti.name}
+                            </span>
+                            <span className='text-[10px] text-[#8890A0] block mt-0.5'>Captain: {ti.captain?.name}</span>
+                          </div>
                         </motion.button>
                       );
                     })}
                   </div>
 
-                  {/* Mode Toggle */}
-                  <div className='pill-toggle mb-4'>
-                    <div className={`pill-toggle-item ${simMode === 'quick' ? 'active' : ''}`} onClick={() => setSimMode('quick')} style={{ position: 'relative' }}>
-                      {simMode === 'quick' && <motion.div layoutId='sim-mode-pill' className='absolute inset-0 rounded' style={{ background: '#D4AF37', zIndex: 0 }} />}
-                      <span className='relative z-10'>Quick</span>
+                  {/* Mode Configurator Tools */}
+                  <div className='flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-[#0D0F14] p-3 rounded-lg border border-[#1E2028] mb-6'>
+                    {/* Switch Toggle */}
+                    <div className='flex items-center rounded-md p-1 bg-[#111318] border border-[#1E2028] shrink-0'>
+                      <button
+                        type='button'
+                        onClick={() => setSimMode('quick')}
+                        className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${simMode === 'quick' ? 'bg-[#D4AF37] text-[#0D0F14] shadow' : 'text-[#8890A0] hover:text-[#E8E8E8]'}`}
+                      >
+                        Quick Presets
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => setSimMode('deep')}
+                        className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${simMode === 'deep' ? 'bg-[#D4AF37] text-[#0D0F14] shadow' : 'text-[#8890A0] hover:text-[#E8E8E8]'}`}
+                      >
+                        Advanced Scorecard
+                      </button>
                     </div>
-                    <div className={`pill-toggle-item ${simMode === 'deep' ? 'active' : ''}`} onClick={() => setSimMode('deep')} style={{ position: 'relative' }}>
-                      {simMode === 'deep' && <motion.div layoutId='sim-mode-pill' className='absolute inset-0 rounded' style={{ background: '#D4AF37', zIndex: 0 }} />}
-                      <span className='relative z-10'>Deep NRR</span>
-                    </div>
+
+                    {/* Smart simulate trigger */}
+                    <button
+                      onClick={smartSimulateCurrent}
+                      className='flex items-center justify-center gap-1.5 text-xs font-bold py-2 px-3 rounded bg-[#1A1D26] hover:bg-[#1E2028] text-[#D4AF37] border border-[#D4AF37]/20 transition-all shrink-0'
+                    >
+                      <Sparkles size={13} /> Suggest AI Result
+                    </button>
                   </div>
 
-                  <button onClick={smartSimulateCurrent} className='w-full mb-4 p-3 rounded text-sm font-semibold flex items-center justify-center gap-2' style={{ background: '#1A1D26', border: '1px solid #1E2028', color: '#E8E8E8' }}>
-                    <Sparkles size={14} style={{ color: '#D4AF37' }} /> Smart Simulate
-                  </button>
+                  {/* Inputs display */}
+                  <AnimatePresence mode='wait'>
+                    {simMode === 'quick' ? (
+                      <motion.div
+                        key='quick'
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.2 }}
+                        className='space-y-3'
+                      >
+                        {/* Handy presetted margin clips */}
+                        <div className='grid grid-cols-3 gap-2'>
+                          {[
+                            { label: 'Close (+5 Runs)', type: 'runs' as MarginType, val: 5 },
+                            { label: 'Dominant (+25 Runs)', type: 'runs' as MarginType, val: 25 },
+                            { label: 'Crushing (+7 Wickets)', type: 'wickets' as MarginType, val: 7 }
+                          ].map(preset => (
+                            <button
+                              key={preset.label}
+                              disabled={!selectedWinner}
+                              onClick={() => applySimulation(selectedWinner!, preset.type, preset.val)}
+                              className='py-2 px-3 rounded-lg bg-[#111318] hover:bg-[#1A1D26] border border-[#1E2028] text-center text-xs font-semibold text-[#8890A0] hover:text-[#E8E8E8] hover:border-[#D4AF37]/40 transition-all disabled:opacity-30 disabled:pointer-events-none'
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
 
-                  {simMode === 'quick' ? (
-                    <div className='space-y-3'>
-                      <div className='grid grid-cols-3 gap-2'>
-                        {[{ l: 'Close (+5R)', t: 'runs' as MarginType, v: 5 }, { l: 'Normal (+20R)', t: 'runs' as MarginType, v: 20 }, { l: 'Huge (+60R)', t: 'runs' as MarginType, v: 60 }].map(q => (
-                          <button key={q.l} disabled={!selectedWinner} onClick={() => applySimulation(selectedWinner!, q.t, q.v)} className='p-2 rounded text-xs font-semibold' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: selectedWinner ? '#E8E8E8' : '#3D4356', opacity: selectedWinner ? 1 : 0.5 }}>{q.l}</button>
+                        {/* Custom custom margin box */}
+                        <div className='flex items-center gap-2'>
+                          <select
+                            value={marginType}
+                            onChange={(e) => setMarginType(e.target.value as MarginType)}
+                            className='py-2.5 px-3 rounded-lg bg-[#111318] border border-[#1E2028] text-xs font-bold text-[#E8E8E8] outline-none focus:border-[#D4AF37]'
+                          >
+                            <option value='runs'>Won by Runs</option>
+                            <option value='wickets'>Won by Wickets</option>
+                          </select>
+                          <input
+                            type='number'
+                            value={marginValue}
+                            onChange={(e) => setMarginValue(e.target.value)}
+                            placeholder='Custom margin value...'
+                            className='flex-1 py-2.5 px-3 rounded-lg bg-[#111318] border border-[#1E2028] text-xs font-bold text-[#E8E8E8] outline-none focus:border-[#D4AF37]'
+                          />
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key='deep'
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -5 }}
+                        transition={{ duration: 0.2 }}
+                        className='grid grid-cols-1 md:grid-cols-2 gap-3 p-3 rounded-lg bg-[#0D0F14]/60 border border-[#1E2028]'
+                      >
+                        {[
+                          { team: currentMatch.team1, r: t1Runs, setR: setT1Runs, o: t1Overs, setO: setT1Overs },
+                          { team: currentMatch.team2, r: t2Runs, setR: setT2Runs, o: t2Overs, setO: setT2Overs }
+                        ].map(config => (
+                          <div key={config.team} className='space-y-2 p-2 rounded bg-[#111318] border border-[#1E2028]/60'>
+                            <span className='font-bold text-xs flex items-center gap-1.5 text-[#D4AF37]' style={{ fontFamily: 'var(--font-barlow)' }}>
+                              <span className='w-2 h-2 rounded-full bg-[#D4AF37]' /> {config.team} Innings
+                            </span>
+                            <div className='flex items-center gap-1.5'>
+                              <input
+                                type='number'
+                                value={config.r}
+                                onChange={(e) => config.setR(e.target.value)}
+                                placeholder='Total Runs'
+                                className='w-full py-1.5 px-2 rounded bg-[#0D0F14] border border-[#1E2028] text-xs text-[#E8E8E8] font-bold outline-none focus:border-[#D4AF37]'
+                              />
+                              <span className='text-[10px] text-[#3D4356]'>in</span>
+                              <input
+                                type='number'
+                                step='0.1'
+                                value={config.o}
+                                onChange={(e) => config.setO(e.target.value)}
+                                placeholder='Overs'
+                                className='w-20 py-1.5 px-2 rounded bg-[#0D0F14] border border-[#1E2028] text-xs text-[#E8E8E8] font-bold outline-none focus:border-[#D4AF37]'
+                              />
+                            </div>
+                          </div>
                         ))}
-                      </div>
-                      <div className='flex gap-2'>
-                        <select value={marginType} onChange={(e) => setMarginType(e.target.value as MarginType)} className='py-2 px-3 rounded text-sm font-semibold' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }}>
-                          <option value="runs">Runs</option><option value="wickets">Wickets</option>
-                        </select>
-                        <input type='number' value={marginValue} onChange={(e) => setMarginValue(e.target.value)} placeholder='Margin' className='flex-1 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className='space-y-2'>
-                      {[{ team: currentMatch.team1, runs: t1Runs, setR: setT1Runs, overs: t1Overs, setO: setT1Overs }, { team: currentMatch.team2, runs: t2Runs, setR: setT2Runs, overs: t2Overs, setO: setT2Overs }].map(x => (
-                        <div key={x.team} className='flex items-center gap-2'>
-                          <span className='w-12 text-sm font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#8890A0' }}>{x.team}</span>
-                          <input type='number' value={x.runs} onChange={(e) => x.setR(e.target.value)} placeholder='Runs' className='flex-1 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
-                          <span style={{ color: '#3D4356', fontSize: 11 }}>in</span>
-                          <input type='number' step="0.1" value={x.overs} onChange={(e) => x.setO(e.target.value)} placeholder='Ovs' className='w-20 py-2 px-3 rounded text-sm' style={{ background: '#0D0F14', border: '1px solid #1E2028', color: '#E8E8E8', outline: 'none', fontFamily: 'monospace' }} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                  <button onClick={saveSimulation} disabled={!selectedWinner || (simMode === 'quick' && !marginValue) || (simMode === 'deep' && (!t1Runs || !t2Runs))} className='btn-simulate mt-4'>
-                    <Play size={14} className='inline mr-2' />APPLY RESULT
+                  {/* Trigger main simulator save event */}
+                  <button
+                    onClick={saveSimulation}
+                    disabled={!selectedWinner || (simMode === 'quick' && !marginValue) || (simMode === 'deep' && (!t1Runs || !t2Runs))}
+                    className='w-full mt-5 py-3 rounded-lg font-black text-sm tracking-widest uppercase bg-[#D4AF37] hover:bg-[#e0bb43] text-[#0D0F14] shadow-xl disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center justify-center gap-2'
+                    style={{ fontFamily: 'var(--font-barlow)' }}
+                  >
+                    <Play size={14} fill='#0D0F14' /> Apply Simulation Result
                   </button>
-                </>
+                </motion.div>
               ) : (
-                <div className='text-center py-12'>
-                  <p className='text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#3D4356' }}>SELECT A FIXTURE</p>
-                  <p style={{ color: '#3D4356', fontSize: 13, marginTop: 4 }}>Or click Auto-Simulate All above</p>
-                </div>
-              )}
-            </div>
-
-            {/* Dynamic Standings */}
-            <div className='surface-card overflow-hidden'>
-              <div className='px-4 py-3' style={{ borderBottom: '1px solid #1E2028' }}>
-                <p className='section-label'>PROJECTED STANDINGS</p>
-              </div>
-              <div className='grid grid-cols-12 gap-2 px-4 py-2' style={{ borderBottom: '1px solid #1E2028', color: '#3D4356', fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                <div className='col-span-1'>#</div><div className='col-span-4'>Team</div><div className='col-span-2 text-center'>M</div><div className='col-span-2 text-center'>Pts</div><div className='col-span-3 text-center'>NRR</div>
-              </div>
-              <AnimatePresence>
-                {computedTable.map((entry, idx) => {
-                  const rank = idx + 1;
-                  const rc = getRankChange(entry.team);
-                  const isTop1 = rank === 1;
-                  const isQ = rank <= 4;
-                  const team = teamInfo[entry.team];
-                  const isTarget = entry.team === targetTeam;
-                  return (
-                    <motion.div layout layoutId={`sim-row-${entry.team}`} key={entry.team}
-                      className={`relative grid grid-cols-12 gap-2 px-4 py-3 ${isTop1 ? 'pt-row-gold' : isQ ? 'pt-row-qualify' : ''} ${rc > 0 ? 'flash-up' : rc < 0 ? 'flash-down' : ''}`}
-                      style={{ borderBottom: '1px solid #1E2028', background: isTarget ? 'rgba(212,175,55,0.06)' : undefined }}
-                    >
-                      <span className='ghost-rank'>{rank}</span>
-                      <div className='col-span-1 flex items-center gap-1'>
-                        <span style={{ color: '#3D4356', fontSize: 13, fontWeight: 700 }}>{rank}</span>
-                        {rc > 0 && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><TrendingUp size={12} style={{ color: '#1D9E75' }} /></motion.div>}
-                        {rc < 0 && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring' }}><TrendingDown size={12} style={{ color: '#E8003D' }} /></motion.div>}
-                      </div>
-                      <div className='col-span-4 flex items-center gap-2'>
-                        <div className='w-5 h-5 rounded overflow-hidden shrink-0' style={{ background: '#1A1D26', padding: 2 }}>
-                          <img src={team.logo} alt={entry.team} className='w-full h-full object-contain' onError={(e) => { (e.target as HTMLImageElement).src = team.fallbackLogo || ''; }} />
-                        </div>
-                        <span className='font-bold text-sm' style={{ fontFamily: 'var(--font-barlow)', color: isTarget ? '#D4AF37' : '#E8E8E8' }}>{entry.team}</span>
-                      </div>
-                      <div className='col-span-2 text-center text-sm' style={{ color: '#8890A0' }}>{entry.matches}</div>
-                      <div className='col-span-2 text-center text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>{entry.points}</div>
-                      <div className={`col-span-3 text-center text-sm font-semibold ${entry.nrr >= 0 ? 'nrr-positive' : 'nrr-negative'}`}>{entry.nrr >= 0 ? '+' : ''}{entry.nrr.toFixed(3)}</div>
-                      {rank === 4 && <motion.div className='cutoff-line absolute bottom-0 left-0 right-0' initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} transition={{ duration: 0.6, delay: 0.4 }}
-                        style={{ height: 2, background: 'linear-gradient(90deg, transparent, #D4AF37, transparent)' }} />}
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-
-            {/* Celebration Banner */}
-            <AnimatePresence>
-              {Object.keys(simulatedMatches).length === liveMatches.length && liveMatches.length > 0 && (
-                <motion.div initial={{ y: 20, opacity: 0, scale: 0.95 }} animate={{ y: 0, opacity: 1, scale: 1 }} exit={{ y: -10, opacity: 0 }}
-                  className='surface-card p-5 text-center' style={{ border: '1px solid rgba(212,175,55,0.3)', background: 'rgba(212,175,55,0.04)' }}>
-                  <motion.p animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 2 }}
-                    className='text-lg font-bold' style={{ fontFamily: 'var(--font-barlow)', color: '#D4AF37' }}>
-                    🏆 ALL {liveMatches.length} MATCHES SIMULATED!
-                  </motion.p>
-                  <p style={{ fontSize: 12, color: '#8890A0', marginTop: 4 }}>
-                    Top 4: {computedTable.slice(0, 4).map(e => e.team).join(', ')}
-                  </p>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className='rounded-xl border border-[#1E2028] bg-[#111318]/40 p-12 text-center flex flex-col items-center justify-center gap-3'
+                >
+                  <div className='w-12 h-12 rounded-full bg-[#1A1D26] flex items-center justify-center text-[#D4AF37] border border-[#1E2028]'>
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <span className='font-bold text-base block text-[#E8E8E8]' style={{ fontFamily: 'var(--font-barlow)' }}>
+                      NO MATCH SELECTED
+                    </span>
+                    <span className='text-xs text-[#8890A0] block mt-1'>
+                      Click any fixture on the left rail to configure hypothetical scores, or simulate everything instantly.
+                    </span>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Playoff Scenarios */}
-            {isSimActive && (
-              <div className='surface-card p-4'>
-                <p className='section-label mb-3'>PLAYOFF SCENARIOS</p>
-                <div className='grid grid-cols-2 md:grid-cols-5 gap-2'>
+            {/* Simulated Live Table Output Standings */}
+            <div className='rounded-xl border border-[#1E2028] bg-[#111318] shadow-xl overflow-hidden'>
+              <div className='flex items-center justify-between px-5 py-4 border-b border-[#1E2028] bg-[#1A1D26]/40'>
+                <div className='flex items-center gap-2'>
+                  <span className='text-xs font-bold tracking-wider text-[#E8E8E8] uppercase flex items-center gap-1.5'>
+                    <Trophy size={14} className='text-[#D4AF37]' /> Projected Live Points Table
+                  </span>
+                  {isSimActive && (
+                    <span className='text-[10px] bg-emerald-500/10 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/20'>
+                      Live Simulation Active
+                    </span>
+                  )}
+                </div>
+                <span className='text-[10px] text-[#8890A0] hidden sm:block'>Top 4 Qualify for Playoffs</span>
+              </div>
+
+              {/* Grid Title bar */}
+              <div className='grid grid-cols-12 gap-2 px-5 py-2.5 bg-[#0D0F14]/80 border-b border-[#1E2028] text-[10px] font-bold text-[#8890A0] uppercase tracking-wider'>
+                <div className='col-span-2 sm:col-span-1'>Rank</div>
+                <div className='col-span-4 sm:col-span-5'>Franchise</div>
+                <div className='col-span-2 text-center'>Played</div>
+                <div className='col-span-2 text-center'>Points</div>
+                <div className='col-span-2 text-right'>Net RR</div>
+              </div>
+
+              {/* Rows List */}
+              <div className='divide-y divide-[#1E2028]/60 relative'>
+                <AnimatePresence>
                   {computedTable.map((entry, idx) => {
                     const rank = idx + 1;
-                    const ti = teamInfo[entry.team];
-                    const remainingMatches = liveMatches.filter(m => (m.team1 === entry.team || m.team2 === entry.team) && !simulatedMatches[m.id]).length;
-                    const simWins = Object.values(simulatedMatches).filter(s => s.winner === entry.team).length;
+                    const rc = getRankChange(entry.team);
+                    const isTop4 = rank <= 4;
+                    const isTarget = entry.team === targetTeam;
+                    const tInfo = teamInfo[entry.team];
+
                     return (
-                      <div key={entry.team} className='p-3 rounded text-center' style={{
-                        background: rank <= 4 ? 'rgba(29,158,117,0.06)' : 'rgba(232,0,61,0.04)',
-                        border: `1px solid ${rank <= 4 ? 'rgba(29,158,117,0.15)' : 'rgba(232,0,61,0.1)'}`,
-                      }}>
-                        <div className='w-6 h-6 rounded overflow-hidden mx-auto mb-1' style={{ background: '#1A1D26', padding: 1 }}>
-                          <img src={ti.logo} alt={entry.team} className='w-full h-full object-contain' />
+                      <motion.div
+                        layout
+                        layoutId={`table-row-${entry.team}`}
+                        key={entry.team}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className={`grid grid-cols-12 gap-2 px-5 py-3.5 items-center relative transition-colors ${
+                          isTarget ? 'bg-[#D4AF37]/5' : 'hover:bg-[#1A1D26]/30'
+                        }`}
+                        style={{
+                          borderLeft: isTop4 ? `3px solid ${rank === 1 ? '#D4AF37' : '#1D9E75'}` : '3px solid transparent'
+                        }}
+                      >
+                        {/* Faint watermark numbering background */}
+                        <span className='absolute right-12 top-1/2 -translate-y-1/2 text-5xl font-black text-[#E8E8E8]/[0.02] pointer-events-none select-none' style={{ fontFamily: 'var(--font-barlow)' }}>
+                          {rank}
+                        </span>
+
+                        {/* Rank cell */}
+                        <div className='col-span-2 sm:col-span-1 flex items-center gap-1.5'>
+                          <span className={`text-xs font-bold ${rank === 1 ? 'text-[#D4AF37]' : isTop4 ? 'text-emerald-400' : 'text-[#8890A0]'}`}>
+                            {rank}
+                          </span>
+                          {rc > 0 && <TrendingUp size={12} className='text-emerald-400 shrink-0 animate-bounce' />}
+                          {rc < 0 && <TrendingDown size={12} className='text-[#E8003D] shrink-0' />}
                         </div>
-                        <p className='font-bold text-xs' style={{ fontFamily: 'var(--font-barlow)', color: rank <= 4 ? '#1D9E75' : '#E8003D' }}>#{rank}</p>
-                        <p style={{ fontSize: 9, color: '#8890A0' }}>{entry.points}pts • {simWins}W</p>
-                        {remainingMatches > 0 && <p style={{ fontSize: 8, color: '#3D4356' }}>{remainingMatches} left</p>}
-                      </div>
+
+                        {/* Franchise Name cell */}
+                        <div className='col-span-4 sm:col-span-5 flex items-center gap-2.5'>
+                          <div className='w-6 h-6 rounded-full bg-[#0D0F14] border border-[#1E2028] p-0.5 shrink-0 overflow-hidden'>
+                            <img src={tInfo?.logo} alt={entry.team} className='w-full h-full object-contain' />
+                          </div>
+                          <span className={`font-bold text-xs sm:text-sm tracking-wide ${isTarget ? 'text-[#D4AF37]' : '#E8E8E8'}`} style={{ fontFamily: 'var(--font-barlow)' }}>
+                            {entry.team}
+                          </span>
+                        </div>
+
+                        {/* Matches */}
+                        <div className='col-span-2 text-center text-xs text-[#8890A0] font-medium'>
+                          {entry.matches}
+                        </div>
+
+                        {/* Points */}
+                        <div className='col-span-2 text-center text-sm font-black text-[#E8E8E8]' style={{ fontFamily: 'var(--font-barlow)' }}>
+                          {entry.points}
+                        </div>
+
+                        {/* Net RR */}
+                        <div className={`col-span-2 text-right text-xs font-bold tracking-tight ${entry.nrr >= 0 ? 'text-emerald-400' : 'text-[#E8003D]'}`}>
+                          {entry.nrr >= 0 ? '+' : ''}{entry.nrr.toFixed(3)}
+                        </div>
+
+                        {/* Divider Line below 4th place */}
+                        {rank === 4 && (
+                          <div className='absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-[#E8003D]/60 to-transparent pointer-events-none' />
+                        )}
+                      </motion.div>
                     );
                   })}
-                </div>
+                </AnimatePresence>
               </div>
+            </div>
+
+            {/* Playoff Paths Status Summary Dashboard */}
+            {isSimActive && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className='grid grid-cols-2 sm:grid-cols-5 gap-3'
+              >
+                {computedTable.slice(0, 5).map((entry, idx) => {
+                  const rank = idx + 1;
+                  const tInfo = teamInfo[entry.team];
+                  const simWins = Object.values(simulatedMatches).filter(s => s.winner === entry.team).length;
+
+                  return (
+                    <div
+                      key={entry.team}
+                      className='p-3 rounded-xl bg-[#111318] border border-[#1E2028] flex flex-col items-center justify-center text-center relative overflow-hidden group'
+                    >
+                      <div className='absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-[#D4AF37]/30 to-transparent' />
+                      <div className='w-7 h-7 rounded-full bg-[#0D0F14] border border-[#1E2028] p-1 mb-1.5'>
+                        <img src={tInfo?.logo} alt={entry.team} className='w-full h-full object-contain' />
+                      </div>
+                      <span className='font-bold text-xs text-[#E8E8E8]' style={{ fontFamily: 'var(--font-barlow)' }}>
+                        {entry.team}
+                      </span>
+                      <span className='text-[10px] text-[#8890A0] mt-0.5'>
+                        {entry.points} pts {simWins > 0 ? `(+${simWins}W)` : ''}
+                      </span>
+                      <span className={`text-[9px] font-bold mt-1 px-1.5 py-0.5 rounded ${rank <= 4 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                        {rank <= 4 ? `Rank #${rank}` : 'In Chase'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </motion.div>
             )}
           </div>
         </div>

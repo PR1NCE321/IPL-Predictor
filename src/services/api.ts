@@ -2,8 +2,8 @@ import { Match, PointsTableEntry, Team } from '@/types';
 import { completedMatches, upcomingMatches, currentPointsTable } from '@/data/mockData';
 import { estimateWinProbability } from '@/services/probability';
 
-export const API_KEY = process.env.NEXT_PUBLIC_CRICAPI_KEY || "bb55c7c3-1191-47a0-b38e-e676a4f4cdaf";
-const BASE_URL = "https://api.cricapi.com/v1";
+// API key is now server-only (in .env.local / Vercel env vars).
+// This file is client-safe — it never accesses keys directly.
 const CACHE_KEY = 'ipl_api_cache_v4';
 const CACHE_TIME_KEY = 'ipl_api_cache_time_v4';
 
@@ -56,38 +56,46 @@ function resolveWinner(apiMatch: any): Team | undefined {
   return mapTeamName(apiMatch.matchWinner);
 }
 
-// Global cache to avoid excessive API hits (resets on full page reload)
+// Client-side memory cache — 5 minutes aligns with the hook's poll interval.
+// The server enforces a 30-min hard cooldown on external CricAPI calls.
 let memCacheData_v3: any = null;
 let memCacheTime_v3: number = 0;
-const CACHE_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
-export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}): Promise<{ matches: Match[]; pointsTable: PointsTableEntry[]; isMockData?: boolean }> {
+export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}): Promise<{
+  matches: Match[];
+  pointsTable: PointsTableEntry[];
+  isMockData?: boolean;
+  updatedAt?: number;
+}> {
   const { forceRefresh = false } = options;
 
-  // 1. Check Memory Cache
+  // 1. Check client memory cache
   if (!forceRefresh && memCacheData_v3 && Date.now() - memCacheTime_v3 < CACHE_DURATION_MS) {
     return memCacheData_v3;
   }
 
-  // 2. Fetch from our highly optimized Next.js ISR API route
+  // 2. Fetch from the Next.js API route (which handles CricAPI + persistence)
   try {
     const endpoint = forceRefresh ? '/api/live-data?forceRefresh=1' : '/api/live-data';
     const response = await fetch(endpoint, { cache: 'no-store' });
     if (response.ok) {
       const data = await response.json();
+      // data.updatedAt is the real server-side CricAPI fetch timestamp
       memCacheData_v3 = data;
       memCacheTime_v3 = Date.now();
       return data;
     }
   } catch (err) {
-    console.log("Failed to fetch from ISR route. Falling back to mockData.ts");
+    console.warn('[api] Failed to reach /api/live-data. Falling back to mockData.ts');
   }
 
-  // 3. Fallback to statically imported mockData.ts
+  // 3. Last-resort fallback — static mock data bundled at build time
   const fallbackData = {
     matches: [...completedMatches, ...upcomingMatches],
     pointsTable: [...currentPointsTable],
-    isMockData: true
+    isMockData: true,
+    updatedAt: Date.now(),
   };
 
   memCacheData_v3 = fallbackData;
@@ -96,7 +104,4 @@ export async function getLiveSystemData(options: { forceRefresh?: boolean } = {}
   return fallbackData;
 }
 
-// Estimate win probabilities for a match. This is intentionally lightweight
-// — it combines historical head-to-head, simple points-table adjustment,
-// and a small live-game heuristic when `liveScore` is present.
-// `estimateWinProbability` moved to `src/services/probability.ts`
+// `estimateWinProbability` lives in `src/services/probability.ts`

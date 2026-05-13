@@ -27,7 +27,7 @@ export const teamInfo: Record<Team, TeamInfo> = {
     captain: { name: 'Ajinkya Rahane', image: '/captains/KKRcaptain.avif', fallbackImage: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Shreyas_Iyer_in_PMO_New_Delhi.jpg/800px-Shreyas_Iyer_in_PMO_New_Delhi.jpg' }
   },
   GT: {
-    id: 'gt', name: 'Gujarat Titans', shortName: 'GT', color: '#1B2133',
+    id: 'gt', name: 'Gujarat Titans', shortName: 'GT', color: '#B57EDC',
     logo: '/logos/GToutline.avif', fallbackLogo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/09/Gujarat_Titans_Logo.svg/1200px-Gujarat_Titans_Logo.svg.png',
     description: 'Champions of 2022. Led by Shubman Gill.',
     captain: { name: 'Shubman Gill', image: '/captains/GTcaptain.avif', fallbackImage: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Shubman_Gill_in_PMO_New_Delhi.jpg/800px-Shubman_Gill_in_PMO_New_Delhi.jpg' }
@@ -149,26 +149,24 @@ export const completedMatches: Match[] = [
   { id: 47, matchNumber: 47, team1: 'MI', team2: 'LSG', winner: 'MI', margin: 6, marginType: 'wickets', date: '2026-05-04', venue: 'Wankhede Stadium, Mumbai', status: 'completed' },
   { id: 48, matchNumber: 48, team1: 'DC', team2: 'CSK', winner: 'CSK', margin: 8, marginType: 'wickets', date: '2026-05-05', venue: 'Arun Jaitley Stadium, Delhi', status: 'completed' },
   { id: 49, matchNumber: 49, team1: 'SRH', team2: 'PBKS', winner: 'SRH', margin: 33, marginType: 'runs', date: '2026-05-06', venue: 'Rajiv Gandhi International Stadium, Hyderabad', status: 'completed' },
-  // Match 50: Rain-affected, result via DLS method
   { id: 50, matchNumber: 50, team1: 'LSG', team2: 'RCB', winner: 'LSG', margin: 9, marginType: 'runs', date: '2026-05-07', venue: 'Ekana Stadium, Lucknow', status: 'completed' },
 
-  // Match 51–55 (May 8 – May 11)
+  // Match 51–56
   { id: 51, matchNumber: 51, team1: 'DC', team2: 'KKR', winner: 'KKR', margin: 8, marginType: 'wickets', date: '2026-05-08', venue: 'Arun Jaitley Stadium, Delhi', status: 'completed' },
   { id: 52, matchNumber: 52, team1: 'RR', team2: 'GT', winner: 'GT', margin: 77, marginType: 'runs', date: '2026-05-09', venue: 'Sawai Mansingh Stadium, Jaipur', status: 'completed' },
   { id: 53, matchNumber: 53, team1: 'CSK', team2: 'LSG', winner: 'CSK', margin: 5, marginType: 'wickets', date: '2026-05-10', venue: 'MA Chidambaram Stadium, Chennai', status: 'completed' },
   { id: 54, matchNumber: 54, team1: 'RCB', team2: 'MI', winner: 'RCB', margin: 2, marginType: 'wickets', date: '2026-05-10', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'completed' },
-  // Match 55: Confirmed via SportRadar — DC won by 3 wickets (210/5 vs 216/7) on May 11
   { id: 55, matchNumber: 55, team1: 'PBKS', team2: 'DC', winner: 'DC', margin: 3, marginType: 'wickets', date: '2026-05-11', venue: 'HPCA Stadium, Dharamsala', status: 'completed' },
+  { id: 56, matchNumber: 56, team1: 'GT', team2: 'SRH', winner: 'GT', margin: 82, marginType: 'runs', date: '2026-05-12', venue: 'Narendra Modi Stadium, Ahmedabad', status: 'completed' },
 ];
 
-// ─── Upcoming Matches (56–70) ──────────────────────────────────────────────────
+// ─── Upcoming Matches (57–70) ──────────────────────────────────────────────────
 export const upcomingMatches: Match[] = [
-  { id: 56, matchNumber: 56, team1: 'GT', team2: 'SRH', winner: 'GT', margin: 82, marginType: 'runs', date: '2026-05-12', venue: 'Narendra Modi Stadium, Ahmedabad', status: 'completed' },
-  { id: 57, matchNumber: 57, team1: 'RCB', team2: 'KKR', date: '2026-05-13', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'pending' },
-  { id: 58, matchNumber: 58, team1: 'PBKS', team2: 'MI', date: '2026-05-14', venue: 'HPCA Stadium, Dharamsala', status: 'pending' },
+  { id: 57, matchNumber: 57, team1: 'RCB', team2: 'KKR', date: '2026-05-13', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'live' },
+  { id: 58, matchNumber: 58, team1: 'PBKS', team2: 'MI', date: '2026-05-14', venue: 'HPCA Stadium, Dharamshala', status: 'pending' },
   { id: 59, matchNumber: 59, team1: 'LSG', team2: 'CSK', date: '2026-05-15', venue: 'Ekana Stadium, Lucknow', status: 'pending' },
   { id: 60, matchNumber: 60, team1: 'KKR', team2: 'GT', date: '2026-05-16', venue: 'Eden Gardens, Kolkata', status: 'pending' },
-  { id: 61, matchNumber: 61, team1: 'PBKS', team2: 'RCB', date: '2026-05-17', venue: 'HPCA Stadium, Dharamsala', status: 'pending' },
+  { id: 61, matchNumber: 61, team1: 'PBKS', team2: 'RCB', date: '2026-05-17', venue: 'HPCA Stadium, Dharamshala', status: 'pending' },
   { id: 62, matchNumber: 62, team1: 'DC', team2: 'RR', date: '2026-05-17', venue: 'Arun Jaitley Stadium, Delhi', status: 'pending' },
   { id: 63, matchNumber: 63, team1: 'CSK', team2: 'SRH', date: '2026-05-18', venue: 'MA Chidambaram Stadium, Chennai', status: 'pending' },
   { id: 64, matchNumber: 64, team1: 'RR', team2: 'LSG', date: '2026-05-19', venue: 'Sawai Mansingh Stadium, Jaipur', status: 'pending' },
@@ -185,16 +183,16 @@ export const allMatches = [...completedMatches, ...upcomingMatches];
 // ─── IPL 2026 Official Points Table after Match 56 ───────────────────────────
 // Source: iplt20.com/matches/points-table (verified May 12 2026)
 export const currentPointsTable: PointsTableEntry[] = [
-  { team: 'RCB',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  1.103, qualificationChance: 87 },
-  { team: 'SRH',  matches: 12, wins: 7, losses: 5, points: 14, nrr:  0.327, qualificationChance: 58 },
-  { team: 'GT',   matches: 12, wins: 8, losses: 4, points: 16, nrr:  0.638, qualificationChance: 96 },
+  { team: 'GT', matches: 12, wins: 8, losses: 4, noResults: 0, points: 16, nrr: 0.551, qualificationChance: 98 },
+  { team: 'RCB', matches: 11, wins: 7, losses: 4, noResults: 0, points: 14, nrr: 1.103, qualificationChance: 90 },
+  { team: 'SRH', matches: 12, wins: 7, losses: 5, noResults: 0, points: 14, nrr: 0.331, qualificationChance: 72 },
   { team: 'PBKS', matches: 11, wins: 6, losses: 4, noResults: 1, points: 13, nrr: 0.428, qualificationChance: 63 },
-  { team: 'CSK',  matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.185, qualificationChance: 45 },
-  { team: 'RR',   matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.082, qualificationChance: 52 },
-  { team: 'DC',   matches: 12, wins: 5, losses: 7, points: 10, nrr: -0.993, qualificationChance: 0 },
-  { team: 'KKR',  matches: 10, wins: 4, losses: 5, noResults: 1, points: 9, nrr: -0.169, qualificationChance: 3 },
-  { team: 'MI',   matches: 11, wins: 3, losses: 8, points:  6, nrr: -0.585, qualificationChance: 0 },
-  { team: 'LSG',  matches: 11, wins: 3, losses: 8, points:  6, nrr: -0.907, qualificationChance: 0 },
+  { team: 'CSK', matches: 11, wins: 6, losses: 5, noResults: 0, points: 12, nrr: 0.185, qualificationChance: 38 },
+  { team: 'RR', matches: 11, wins: 6, losses: 5, noResults: 0, points: 12, nrr: 0.082, qualificationChance: 29 },
+  { team: 'DC', matches: 12, wins: 5, losses: 7, noResults: 0, points: 10, nrr: -0.993, qualificationChance: 0 },
+  { team: 'KKR', matches: 10, wins: 4, losses: 5, noResults: 1, points: 9, nrr: -0.169, qualificationChance: 9 },
+  { team: 'MI', matches: 11, wins: 3, losses: 8, noResults: 0, points: 6, nrr: -0.585, qualificationChance: 0 },
+  { team: 'LSG', matches: 11, wins: 3, losses: 8, noResults: 0, points: 6, nrr: -0.907, qualificationChance: 0 },
 ];
 
 // ─── Probability Trends (based on real match progression) ──────────────────────

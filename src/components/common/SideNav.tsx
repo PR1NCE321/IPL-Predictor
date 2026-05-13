@@ -11,7 +11,10 @@ import {
   BarChart3,
   Gamepad2,
   Shield,
+  RefreshCw,
+  WifiOff,
 } from 'lucide-react';
+import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -22,9 +25,47 @@ const NAV_ITEMS = [
   { href: '/simulator', label: 'Simulator', icon: Gamepad2 },
 ];
 
+/** Format timestamp as "X min ago" / "Just now" / "Xh ago" */
+function useRelativeTime(ts: number | null): string {
+  if (!ts) return 'Never';
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return 'Just now';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  return `${Math.floor(diff / 3_600_000)}h ago`;
+}
+
+/** Pulsing green/red dot showing data freshness */
+function FreshnessIndicator({ lastUpdated, error, isMockData }: {
+  lastUpdated: number | null;
+  error: string | null;
+  isMockData: boolean;
+}) {
+  const isStale = lastUpdated ? (Date.now() - lastUpdated > 35 * 60 * 1000) : true;
+  const color = error || isMockData ? '#F87171' : isStale ? '#FBBF24' : '#34D399';
+  const label = error ? 'Offline' : isMockData ? 'Mock data' : isStale ? 'Stale' : 'Live';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+        <motion.span
+          animate={{ scale: [1, 1.8, 1], opacity: [0.7, 0, 0.7] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          style={{ position: 'absolute', width: 8, height: 8, borderRadius: '50%', background: color, opacity: 0.4 }}
+        />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+      </span>
+      <span style={{ fontSize: 10, color, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export function SideNav() {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState(false);
+  const { lastUpdated, error, isMockData, loading } = useLiveSystemData();
+  const relativeTime = useRelativeTime(lastUpdated);
 
   return (
     <>
@@ -134,6 +175,37 @@ export function SideNav() {
             );
           })}
         </div>
+
+        {/* ── Fix 3: Last Updated footer ── */}
+        <div
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            borderTop: '1px solid #1E2028',
+            opacity: expanded ? 1 : 0,
+            transition: 'opacity 180ms ease',
+            pointerEvents: expanded ? 'auto' : 'none',
+          }}
+        >
+          <FreshnessIndicator lastUpdated={lastUpdated} error={error} isMockData={isMockData} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
+            {loading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <RefreshCw size={10} color='#8890A0' />
+              </motion.div>
+            ) : error ? (
+              <WifiOff size={10} color='#F87171' />
+            ) : (
+              <RefreshCw size={10} color='#8890A0' />
+            )}
+            <span style={{ fontSize: 10, color: '#3D4356', whiteSpace: 'nowrap' }}>
+              {loading ? 'Syncing…' : `Updated ${relativeTime}`}
+            </span>
+          </div>
+        </div>
       </nav>
 
       {/* ═══ MOBILE BOTTOM TAB BAR ═══ */}
@@ -171,6 +243,29 @@ export function SideNav() {
           );
         })}
       </nav>
+
+      {/* ═══ MOBILE DATA FRESHNESS PILL ═══ */}
+      {/* Shows at top of screen on mobile when data is stale/offline */}
+      <AnimatePresence>
+        {(error || isMockData) && (
+          <motion.div
+            initial={{ y: -40, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -40, opacity: 0 }}
+            className='fixed top-0 left-0 right-0 z-40 flex md:hidden items-center justify-center gap-2 py-1.5'
+            style={{
+              background: error ? 'rgba(248,113,113,0.12)' : 'rgba(251,191,36,0.1)',
+              borderBottom: `1px solid ${error ? 'rgba(248,113,113,0.3)' : 'rgba(251,191,36,0.25)'}`,
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <WifiOff size={10} color={error ? '#F87171' : '#FBBF24'} />
+            <span style={{ fontSize: 10, color: error ? '#F87171' : '#FBBF24', fontWeight: 600, letterSpacing: '0.06em' }}>
+              {error ? 'OFFLINE — Cached data' : 'DEMO DATA — API unavailable'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
