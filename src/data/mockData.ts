@@ -187,7 +187,7 @@ export const allMatches = [...completedMatches, ...upcomingMatches];
 export const currentPointsTable: PointsTableEntry[] = [
   { team: 'RCB',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  1.103, qualificationChance: 87 },
   { team: 'SRH',  matches: 12, wins: 7, losses: 5, points: 14, nrr:  0.327, qualificationChance: 58 },
-  { team: 'GT',   matches: 12, wins: 8, losses: 4, points: 16, nrr:  0.638, qualificationChance: 96 },
+  { team: 'GT',   matches: 12, wins: 8, losses: 4, points: 16, nrr:  0.553, qualificationChance: 96 },
   { team: 'PBKS', matches: 11, wins: 6, losses: 4, noResults: 1, points: 13, nrr: 0.428, qualificationChance: 63 },
   { team: 'CSK',  matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.185, qualificationChance: 45 },
   { team: 'RR',   matches: 11, wins: 6, losses: 5, points: 12, nrr:  0.082, qualificationChance: 52 },
