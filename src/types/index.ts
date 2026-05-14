@@ -41,6 +41,10 @@ export interface Match {
   tossWinner?: Team;
   tossChoice?: 'bat' | 'field';
   liveScore?: LiveScore;
+  nrrDelta?: {
+    winnerDelta: number;
+    loserDelta: number;
+  };
 }
 
 export interface LiveScore {

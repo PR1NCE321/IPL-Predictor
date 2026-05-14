@@ -162,7 +162,7 @@ export const completedMatches: Match[] = [
 
 // ─── Upcoming Matches (57–70) ──────────────────────────────────────────────────
 export const upcomingMatches: Match[] = [
-  { id: 57, matchNumber: 57, team1: 'RCB', team2: 'KKR', date: '2026-05-13', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'live' },
+  { id: 57, matchNumber: 57, team1: 'RCB', team2: 'KKR', date: '2026-05-13', venue: 'Shaheed Veer Narayan Singh International Stadium, Raipur', status: 'pending' },
   { id: 58, matchNumber: 58, team1: 'PBKS', team2: 'MI', date: '2026-05-14', venue: 'HPCA Stadium, Dharamshala', status: 'pending' },
   { id: 59, matchNumber: 59, team1: 'LSG', team2: 'CSK', date: '2026-05-15', venue: 'Ekana Stadium, Lucknow', status: 'pending' },
   { id: 60, matchNumber: 60, team1: 'KKR', team2: 'GT', date: '2026-05-16', venue: 'Eden Gardens, Kolkata', status: 'pending' },
@@ -183,9 +183,9 @@ export const allMatches = [...completedMatches, ...upcomingMatches];
 // ─── IPL 2026 Official Points Table after Match 56 ───────────────────────────
 // Source: iplt20.com/matches/points-table (verified May 12 2026)
 export const currentPointsTable: PointsTableEntry[] = [
-  { team: 'GT', matches: 12, wins: 8, losses: 4, noResults: 0, points: 16, nrr: 0.551, qualificationChance: 98 },
-  { team: 'RCB', matches: 11, wins: 7, losses: 4, noResults: 0, points: 14, nrr: 1.103, qualificationChance: 90 },
-  { team: 'SRH', matches: 12, wins: 7, losses: 5, noResults: 0, points: 14, nrr: 0.331, qualificationChance: 72 },
+  { team: 'RCB',  matches: 11, wins: 7, losses: 4, points: 14, nrr:  1.103, qualificationChance: 87 },
+  { team: 'SRH',  matches: 12, wins: 7, losses: 5, points: 14, nrr:  0.327, qualificationChance: 58 },
+  { team: 'GT',   matches: 12, wins: 8, losses: 4, points: 16, nrr:  0.638, qualificationChance: 96 },
   { team: 'PBKS', matches: 11, wins: 6, losses: 4, noResults: 1, points: 13, nrr: 0.428, qualificationChance: 63 },
   { team: 'CSK', matches: 11, wins: 6, losses: 5, noResults: 0, points: 12, nrr: 0.185, qualificationChance: 38 },
   { team: 'RR', matches: 11, wins: 6, losses: 5, noResults: 0, points: 12, nrr: 0.082, qualificationChance: 29 },

@@ -41,6 +41,101 @@ function resolveWinner(apiMatch: any) {
   return undefined;
 }
 
+function parseOvers(oversStr: number | string): number {
+  const str = String(oversStr);
+  const parts = str.split('.');
+  const fullOvers = parseInt(parts[0], 10) || 0;
+  const balls = parseInt(parts[1] || '0', 10) || 0;
+  return fullOvers + balls / 6;
+}
+
+interface NRRDelta {
+  winnerDelta: number;
+  loserDelta: number;
+}
+
+function calculateHeuristicNRR(apiMatch: any): NRRDelta {
+  const marginStr = String(apiMatch.status || '');
+  const runsMatch = marginStr.match(/(\d+)\s*runs/i);
+  const wicketsMatch = marginStr.match(/(\d+)\s*wickets/i);
+
+  let nrrChange = 0.05;
+  if (runsMatch) {
+    nrrChange = Math.min(parseInt(runsMatch[1], 10) * 0.004, 0.5);
+  } else if (wicketsMatch) {
+    nrrChange = Math.min(parseInt(wicketsMatch[1], 10) * 0.018, 0.18);
+  }
+  return { winnerDelta: nrrChange, loserDelta: -nrrChange };
+}
+
+function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string): NRRDelta {
+  const scores: Array<{ inning: string; r: number; w: number; o: number }> = apiMatch.score || [];
+
+  if (!scores || scores.length < 2) {
+    return calculateHeuristicNRR(apiMatch);
+  }
+
+  const winnerLower = winnerName.toLowerCase();
+  const loserLower = loserName.toLowerCase();
+
+  let winnerInning: (typeof scores)[0] | undefined;
+  let loserInning: (typeof scores)[0] | undefined;
+
+  for (const inning of scores) {
+    const inningName = inning.inning?.toLowerCase() || '';
+    for (const [fullName, short] of Object.entries(teamNameMap)) {
+      if (inningName.includes(fullName)) {
+        if (short.toLowerCase() === winnerLower || short === winnerName) {
+          winnerInning = inning;
+        } else if (short.toLowerCase() === loserLower || short === loserName) {
+          loserInning = inning;
+        }
+      }
+    }
+  }
+
+  if (!winnerInning && !loserInning && scores.length >= 2) {
+    const [innings1, innings2] = scores;
+    if ((innings1.r || 0) > (innings2.r || 0)) {
+      winnerInning = innings1;
+      loserInning = innings2;
+    } else {
+      winnerInning = innings2;
+      loserInning = innings1;
+    }
+  }
+
+  if (!winnerInning || !loserInning) {
+    return calculateHeuristicNRR(apiMatch);
+  }
+
+  const winnerOvers = parseOvers(winnerInning.o || 20);
+  const loserOvers = parseOvers(loserInning.o || 20);
+  const winnerRR = winnerOvers > 0 ? (winnerInning.r || 0) / winnerOvers : 0;
+  const loserRR = loserOvers > 0 ? (loserInning.r || 0) / loserOvers : 0;
+
+  const delta = parseFloat((winnerRR - loserRR).toFixed(3));
+
+  return {
+    winnerDelta: Math.max(0, delta),
+    loserDelta: -Math.abs(delta),
+  };
+}
+
+function getMatchNRRDelta(m: any): NRRDelta {
+  if (m.nrrDelta) {
+    return m.nrrDelta;
+  }
+  let nrrChange = 0.05;
+  if (m.marginType === 'runs' && typeof m.margin === 'number') {
+    nrrChange = Math.min(m.margin * 0.004, 0.5);
+  } else if (m.marginType === 'wickets' && typeof m.margin === 'number') {
+    nrrChange = Math.min(m.margin * 0.018, 0.18);
+  }
+  const winnerDelta = parseFloat(nrrChange.toFixed(3));
+  return { winnerDelta, loserDelta: -winnerDelta };
+}
+
 // The highest matchNumber already baked into currentPointsTable
 const BASELINE_LAST_MATCH = Math.max(...([...completedMatches].map(m => m.matchNumber)));
 
@@ -127,10 +222,10 @@ async function updateLiveSystem() {
         const winner = resolveWinner(apiMatch);
         const previousStatus = finalMatches[existingMatchIndex].status;
 
-        if (winner && previousStatus !== 'completed') {
+        if (winner && (previousStatus !== 'completed' || !finalMatches[existingMatchIndex].nrrDelta)) {
           finalMatches[existingMatchIndex].status = 'completed';
           finalMatches[existingMatchIndex].winner = winner as any;
-          updatedCount++;
+          if (previousStatus !== 'completed') updatedCount++;
 
           // Parse margin
           const marginStr = String(apiMatch.status || '');
@@ -143,6 +238,10 @@ async function updateLiveSystem() {
             finalMatches[existingMatchIndex].margin = parseInt(wicketsMatch[1], 10);
             finalMatches[existingMatchIndex].marginType = 'wickets';
           }
+
+          const loser = winner === team1 ? team2 : team1;
+          const { winnerDelta, loserDelta } = calculateRealNRR(apiMatch, winner, loser);
+          finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta };
         } else if (!winner && previousStatus !== 'completed') {
           finalMatches[existingMatchIndex].status = 'completed';
           updatedCount++;
@@ -164,6 +263,10 @@ async function updateLiveSystem() {
         if (wEntry && lEntry) {
           wEntry.matches += 1; wEntry.wins += 1; wEntry.points += 2;
           lEntry.matches += 1; lEntry.losses += 1;
+
+          const deltas = getMatchNRRDelta(m);
+          wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
+          lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
         }
       } else {
         const t1 = builtTable.find((t: any) => t.team === m.team1);

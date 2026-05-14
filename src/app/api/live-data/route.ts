@@ -169,6 +169,20 @@ function calculateHeuristicNRR(apiMatch: any): NRRDelta {
   return { winnerDelta: nrrChange, loserDelta: -nrrChange };
 }
 
+function getMatchNRRDelta(m: any): NRRDelta {
+  if (m.nrrDelta) {
+    return m.nrrDelta;
+  }
+  let nrrChange = 0.05;
+  if (m.marginType === 'runs' && typeof m.margin === 'number') {
+    nrrChange = Math.min(m.margin * 0.004, 0.5);
+  } else if (m.marginType === 'wickets' && typeof m.margin === 'number') {
+    nrrChange = Math.min(m.margin * 0.018, 0.18);
+  }
+  const winnerDelta = parseFloat(nrrChange.toFixed(3));
+  return { winnerDelta, loserDelta: -winnerDelta };
+}
+
 function withProbabilities(matches: any[], pointsTable: any[]) {
   return matches.map((m) => ({ ...m, probabilities: estimateWinProbability(m, pointsTable) }));
 }
@@ -216,6 +230,10 @@ function rebuildPointsTable(finalMatches: any[], basePointsTable: any[]): any[] 
         wEntry.points += 2;
         lEntry.matches += 1;
         lEntry.losses += 1;
+
+        const deltas = getMatchNRRDelta(m);
+        wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
+        lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
       }
     } else {
       // No Result — both get 1 point
@@ -372,7 +390,7 @@ export async function GET(request: Request) {
             const winner = resolveWinner(apiMatch);
             const previousStatus = finalMatches[existingMatchIndex].status;
 
-            if (winner && previousStatus !== 'completed') {
+            if (winner && (previousStatus !== 'completed' || !finalMatches[existingMatchIndex].nrrDelta)) {
               finalMatches[existingMatchIndex].status = 'completed';
               finalMatches[existingMatchIndex].winner = winner as any;
 
@@ -404,6 +422,9 @@ export async function GET(request: Request) {
                 const { winnerDelta, loserDelta } = calculateRealNRR(apiMatch, winner, loser);
                 wEntry.nrr = parseFloat((wEntry.nrr + winnerDelta).toFixed(3));
                 lEntry.nrr = parseFloat((lEntry.nrr + loserDelta).toFixed(3));
+
+                // Save NRR delta onto the match object so rebuildPointsTable applies it correctly
+                finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta };
               }
             } else if (!winner && previousStatus !== 'completed') {
               // NO RESULT / ABANDONED — both teams get 1 point
