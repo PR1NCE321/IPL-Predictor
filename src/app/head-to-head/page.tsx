@@ -7,7 +7,7 @@ import { HeadToHeadStats, Team } from '@/types';
 import { useCountUp } from '@/hooks/useCountUp';
 import { ArrowLeftRight } from 'lucide-react';
 
-const teams = Object.keys(teamInfo) as Team[];
+const teams = (Object.keys(teamInfo) as Team[]).filter(k => k !== 'TBD');
 
 function AnimatedNum({ value, decimals = 0 }: { value: number; decimals?: number }) {
   const v = useCountUp(value, 800, decimals);

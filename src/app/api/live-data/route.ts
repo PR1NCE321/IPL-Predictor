@@ -90,12 +90,16 @@ function parseOvers(oversStr: number | string): number {
   return fullOvers + balls / 6;
 }
 
-interface NRRDelta {
+interface NRRData {
   winnerDelta: number;
   loserDelta: number;
+  winnerRuns?: number;
+  winnerOvers?: number;
+  loserRuns?: number;
+  loserOvers?: number;
 }
 
-function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string): NRRDelta {
+function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string): NRRData {
   const scores: Array<{ inning: string; r: number; w: number; o: number }> = apiMatch.score || [];
 
   if (!scores || scores.length < 2) {
@@ -151,10 +155,14 @@ function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string):
   return {
     winnerDelta: Math.max(0, delta),
     loserDelta: -Math.abs(delta),
+    winnerRuns: winnerInning.r || 0,
+    winnerOvers: parseFloat(String(winnerInning.o || 20)),
+    loserRuns: loserInning.r || 0,
+    loserOvers: parseFloat(String(loserInning.o || 20)),
   };
 }
 
-function calculateHeuristicNRR(apiMatch: any): NRRDelta {
+function calculateHeuristicNRR(apiMatch: any): NRRData {
   // Legacy fallback: estimate from margin string
   const marginStr = String(apiMatch.status || '');
   const runsMatch = marginStr.match(/(\d+)\s*runs/i);
@@ -169,7 +177,7 @@ function calculateHeuristicNRR(apiMatch: any): NRRDelta {
   return { winnerDelta: nrrChange, loserDelta: -nrrChange };
 }
 
-function getMatchNRRDelta(m: any): NRRDelta {
+function getMatchNRRDelta(m: any): NRRData {
   if (m.nrrDelta) {
     return m.nrrDelta;
   }
@@ -185,6 +193,21 @@ function getMatchNRRDelta(m: any): NRRDelta {
 
 function withProbabilities(matches: any[], pointsTable: any[]) {
   return matches.map((m) => ({ ...m, probabilities: estimateWinProbability(m, pointsTable) }));
+}
+
+function addOvers(o1: number, o2: number): number {
+  const o1Str = String(o1).split('.');
+  const o2Str = String(o2).split('.');
+  const overs1 = parseInt(o1Str[0], 10) || 0;
+  const balls1 = parseInt(o1Str[1] || '0', 10) || 0;
+  const overs2 = parseInt(o2Str[0], 10) || 0;
+  const balls2 = parseInt(o2Str[1] || '0', 10) || 0;
+  
+  let totalBalls = balls1 + balls2;
+  let extraOvers = Math.floor(totalBalls / 6);
+  totalBalls = totalBalls % 6;
+  
+  return (overs1 + overs2 + extraOvers) + (totalBalls / 10);
 }
 
 function buildResponse(matches: any[], pointsTable: any[], isMockData: boolean, updatedAt: number) {
@@ -232,8 +255,32 @@ function rebuildPointsTable(finalMatches: any[], basePointsTable: any[]): any[] 
         lEntry.losses += 1;
 
         const deltas = getMatchNRRDelta(m);
-        wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
-        lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
+        
+        if (deltas.winnerRuns !== undefined && deltas.winnerOvers !== undefined && 
+            wEntry.runsFor !== undefined && wEntry.oversFor !== undefined) {
+           // Exact NRR recalculation
+           wEntry.runsFor += deltas.winnerRuns;
+           wEntry.oversFor = addOvers(wEntry.oversFor, deltas.winnerOvers);
+           wEntry.runsAgainst += deltas.loserRuns;
+           wEntry.oversAgainst = addOvers(wEntry.oversAgainst, deltas.loserOvers);
+           
+           lEntry.runsFor += deltas.loserRuns;
+           lEntry.oversFor = addOvers(lEntry.oversFor, deltas.loserOvers);
+           lEntry.runsAgainst += deltas.winnerRuns;
+           lEntry.oversAgainst = addOvers(lEntry.oversAgainst, deltas.winnerOvers);
+
+           const wRRFor = parseOvers(wEntry.oversFor) > 0 ? (wEntry.runsFor / parseOvers(wEntry.oversFor)) : 0;
+           const wRRAgainst = parseOvers(wEntry.oversAgainst) > 0 ? (wEntry.runsAgainst / parseOvers(wEntry.oversAgainst)) : 0;
+           wEntry.nrr = parseFloat((wRRFor - wRRAgainst).toFixed(3));
+           
+           const lRRFor = parseOvers(lEntry.oversFor) > 0 ? (lEntry.runsFor / parseOvers(lEntry.oversFor)) : 0;
+           const lRRAgainst = parseOvers(lEntry.oversAgainst) > 0 ? (lEntry.runsAgainst / parseOvers(lEntry.oversAgainst)) : 0;
+           lEntry.nrr = parseFloat((lRRFor - lRRAgainst).toFixed(3));
+        } else {
+           // Fallback
+           wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
+           lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
+        }
       }
     } else {
       // No Result — both get 1 point
@@ -267,12 +314,11 @@ export async function GET(request: Request) {
   // against iplt20.com after each match day). The API only adds NEW matches
   // on top of this baseline, never older ones.
   let finalMatches = [...completedMatches, ...upcomingMatches];
-  let finalPointsTable = JSON.parse(JSON.stringify(currentPointsTable));
   let lastUpdated = 0;
 
   // ── Server-side in-memory cache (30 min cooldown) ─────────────────────────
   const isCooldown = serverSnapshot !== null && (Date.now() - serverSnapshot.updatedAt < EXTERNAL_REFRESH_MS);
-  if (isCooldown && serverSnapshot) {
+  if (isCooldown && serverSnapshot && !forceRefresh) {
     return buildResponse(
       serverSnapshot.matches,
       serverSnapshot.pointsTable,
@@ -281,20 +327,18 @@ export async function GET(request: Request) {
     );
   }
 
-  // ── Check liveData.json for recent match status overrides only ───────────
-  // We do NOT use the stored points table from the file — only the match
-  // status updates (live/completed + winner) that the API previously fetched.
-  // This prevents a stale file from propagating wrong standings.
+  // ── Check liveData.json for saved match status overrides ─────────────────
+  // Always merge saved outcomes (live/completed + winner/margin) into finalMatches
+  // so that recent completions aren't lost if the API keys hit limits or fail.
   const liveDataPath = getLiveDataPath();
+  let fileAge = Infinity;
   try {
     if (fs.existsSync(liveDataPath)) {
       const localData = JSON.parse(fs.readFileSync(liveDataPath, 'utf8'));
-      const fileAge = Date.now() - Number(localData.updatedAt ?? 0);
+      fileAge = Date.now() - Number(localData.updatedAt ?? 0);
 
-      if (localData.matches && fileAge < EXTERNAL_REFRESH_MS) {
-        // Only apply match-status overrides from the file (completed/live/winner/margin)
-        // The points table is ALWAYS rebuilt from mockData — never from the file.
-        (localData.matches as any[]).forEach((savedMatch: any) => {
+      if (localData.matches && Array.isArray(localData.matches)) {
+        localData.matches.forEach((savedMatch: any) => {
           if (savedMatch.status === 'completed' || savedMatch.status === 'live') {
             const idx = finalMatches.findIndex(m => m.matchNumber === savedMatch.matchNumber);
             if (idx !== -1 && finalMatches[idx].status !== 'completed') {
@@ -302,24 +346,23 @@ export async function GET(request: Request) {
             }
           }
         });
-
         lastUpdated = Number(localData.updatedAt ?? 0);
-
-        if (fileAge < EXTERNAL_REFRESH_MS) {
-          // Rebuild points table from scratch based on current finalMatches state
-          const freshTable = rebuildPointsTable(finalMatches, finalPointsTable);
-          serverSnapshot = {
-            matches: finalMatches,
-            pointsTable: freshTable,
-            updatedAt: lastUpdated,
-            isMockData: false,
-          };
-          return buildResponse(finalMatches, freshTable, false, lastUpdated);
-        }
       }
     }
   } catch (err) {
     console.warn("[live-data] Could not read liveData.json:", err);
+  }
+
+  // If cached file is fresh (< 30 mins) and no forceRefresh requested, return early
+  if (fileAge < EXTERNAL_REFRESH_MS && !forceRefresh) {
+    const freshTable = rebuildPointsTable(finalMatches, currentPointsTable);
+    serverSnapshot = {
+      matches: finalMatches,
+      pointsTable: freshTable,
+      updatedAt: lastUpdated || Date.now(),
+      isMockData: false,
+    };
+    return buildResponse(finalMatches, freshTable, false, serverSnapshot.updatedAt);
   }
 
   // 2. Fetch from CricAPI
@@ -407,48 +450,19 @@ export async function GET(request: Request) {
               }
 
               const loser = winner === team1 ? team2 : team1;
-              const wEntry = finalPointsTable.find((t: any) => t.team === winner);
-              const lEntry = finalPointsTable.find((t: any) => t.team === loser);
-
-              if (wEntry && lEntry) {
-                wEntry.matches += 1;
-                wEntry.wins += 1;
-                wEntry.points += 2;
-
-                lEntry.matches += 1;
-                lEntry.losses += 1;
-
-                // ── Fix 2: Use real NRR from scorecard ──
-                const { winnerDelta, loserDelta } = calculateRealNRR(apiMatch, winner, loser);
-                wEntry.nrr = parseFloat((wEntry.nrr + winnerDelta).toFixed(3));
-                lEntry.nrr = parseFloat((lEntry.nrr + loserDelta).toFixed(3));
-
-                // Save NRR delta onto the match object so rebuildPointsTable applies it correctly
-                finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta };
-              }
+              // Save NRR delta onto the match object so rebuildPointsTable applies it correctly
+              const { winnerDelta, loserDelta, winnerRuns, winnerOvers, loserRuns, loserOvers } = calculateRealNRR(apiMatch, winner, loser);
+              finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta, winnerRuns, winnerOvers, loserRuns, loserOvers };
             } else if (!winner && previousStatus !== 'completed') {
-              // NO RESULT / ABANDONED — both teams get 1 point
+              // NO RESULT / ABANDONED
               finalMatches[existingMatchIndex].status = 'completed';
-              const wEntry = finalPointsTable.find((t: any) => t.team === team1);
-              const lEntry = finalPointsTable.find((t: any) => t.team === team2);
-              if (wEntry && lEntry) {
-                wEntry.matches += 1;
-                wEntry.noResults = (wEntry.noResults || 0) + 1;
-                wEntry.points += 1;
-                lEntry.matches += 1;
-                lEntry.noResults = (lEntry.noResults || 0) + 1;
-                lEntry.points += 1;
-              }
             }
           }
         }
       });
 
       // ── Rebuild points table correctly from scratch ──────────────────────
-      // Use rebuildPointsTable so the table is always built from the official
-      // mockData baseline + only NEW match results on top. This is the primary
-      // safeguard against double-counting or stale data corruption.
-      finalPointsTable = rebuildPointsTable(finalMatches, JSON.parse(JSON.stringify(currentPointsTable)));
+      const finalPointsTable = rebuildPointsTable(finalMatches, currentPointsTable);
 
       // Recalculate qualification probabilities via Monte Carlo
       const qualResult = calculateQualificationProbabilities(finalMatches, finalPointsTable);
@@ -459,7 +473,7 @@ export async function GET(request: Request) {
 
       const now = Date.now();
 
-      // Write match statuses to file for future requests (only match status, not the table)
+      // Write match statuses to file for future requests
       try {
         fs.writeFileSync(
           liveDataPath,
@@ -484,13 +498,20 @@ export async function GET(request: Request) {
     console.error("[live-data] ISR Fetch Error:", error);
   }
 
-  // Fallback if API fails entirely
+  // Fallback if API fails entirely: ensure points table perfectly matches finalMatches
+  const fallbackPointsTable = rebuildPointsTable(finalMatches, currentPointsTable);
+  const qualResult = calculateQualificationProbabilities(finalMatches, fallbackPointsTable);
+  fallbackPointsTable.forEach((t: any) => {
+    const teamKey = t.team as keyof typeof qualResult.probabilities;
+    t.qualificationChance = qualResult.probabilities[teamKey];
+  });
+
   const fallbackUpdatedAt = lastUpdated || Date.now();
   serverSnapshot = {
     matches: finalMatches,
-    pointsTable: finalPointsTable,
+    pointsTable: fallbackPointsTable,
     updatedAt: fallbackUpdatedAt,
     isMockData: true,
   };
-  return buildResponse(finalMatches, finalPointsTable, true, fallbackUpdatedAt);
+  return buildResponse(finalMatches, fallbackPointsTable, true, fallbackUpdatedAt);
 }

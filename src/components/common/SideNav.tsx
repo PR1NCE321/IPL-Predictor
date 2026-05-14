@@ -85,19 +85,15 @@ export function SideNav() {
         {/* Logo */}
         <div className='flex items-center gap-3 px-4 mb-8 whitespace-nowrap'>
           <div
-            className='flex items-center justify-center shrink-0'
+            className='relative flex items-center justify-center shrink-0 overflow-hidden rounded border border-[#D4AF37]/30'
             style={{
               width: 28,
               height: 28,
-              background: '#D4AF37',
-              borderRadius: 4,
-              color: '#0D0F14',
-              fontFamily: 'var(--font-barlow), Barlow Condensed, sans-serif',
-              fontWeight: 800,
-              fontSize: 14,
+              background: 'linear-gradient(135deg, #002B5B, #0A3A6B)',
+              boxShadow: '0 0 12px rgba(212,175,55,0.15)',
             }}
           >
-            IP
+            <img src="/logos/ipl-logo-new-old.avif" alt="IPL Logo" className="w-full h-full object-cover" />
           </div>
           <span
             style={{

@@ -5,7 +5,7 @@ import { teamInfo } from '@/data/mockData';
 import { HeadToHeadStats, Team } from '@/types';
 import { TeamLogoBadge } from '@/components/common/TeamLogoBadge';
 
-const teams = Object.keys(teamInfo) as Team[];
+const teams = (Object.keys(teamInfo) as Team[]).filter(k => k !== 'TBD');
 
 function Bar({ label, value }: { label: string; value: number }) {
   return (

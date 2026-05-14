@@ -256,10 +256,10 @@ export default function HomePage() {
                       color: !isT1Winner ? '#D4AF37' : '#3D4356'
                     }}>{m.team2}</span>
                   </div>
-                  {m.winner && m.margin ? (
+                  {m.winner ? (
                     <div className='text-center py-2 rounded' style={{ background: 'rgba(29, 158, 117, 0.08)', border: '1px solid rgba(29, 158, 117, 0.15)' }}>
                       <span style={{ color: '#1D9E75', fontSize: 12, fontWeight: 600 }}>
-                        {m.winner} won by {m.margin} {m.marginType}
+                        {m.winner} won{m.margin ? ` by ${m.margin} ${m.marginType || 'runs'}` : ''}
                       </span>
                     </div>
                   ) : (

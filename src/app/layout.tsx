@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Barlow_Condensed } from 'next/font/google';
 import './globals.css';
-import { SideNav } from '@/components/common/SideNav';
+import { Navbar } from '@/components/common/Navbar';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const barlow = Barlow_Condensed({
@@ -39,10 +39,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         }}
       >
         <a href='#main-content' className='skip-link'>Skip to content</a>
-        <SideNav />
+        <Navbar />
         <main
           id='main-content'
-          className='relative z-10 min-h-screen pb-16 md:pb-0 md:ml-[56px]'
+          className='relative z-10 min-h-screen pt-[72px]'
         >
           {children}
         </main>

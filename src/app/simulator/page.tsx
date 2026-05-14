@@ -38,6 +38,13 @@ export default function SimulatorPage() {
   const [t2Runs, setT2Runs] = useState('');
   const [t2Overs, setT2Overs] = useState('20');
 
+  const [playoffSim, setPlayoffSim] = useState<{
+    q1Winner?: Team;
+    elimWinner?: Team;
+    q2Winner?: Team;
+    finalWinner?: Team;
+  }>({});
+
   const currentMatch = (selectedMatch !== null && liveMatches) ? liveMatches[selectedMatch] : null;
 
   useEffect(() => {
@@ -250,7 +257,7 @@ export default function SimulatorPage() {
               )}
               {isSimActive && (
                 <button
-                  onClick={() => { setSimulatedMatches({}); setSelectedMatch(null); }}
+                  onClick={() => { setSimulatedMatches({}); setPlayoffSim({}); setSelectedMatch(null); }}
                   className='flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#E8003D] hover:bg-[#E8003D]/10 transition-all'
                 >
                   <RefreshCcw size={13} /> Reset
@@ -297,7 +304,7 @@ export default function SimulatorPage() {
                   className='w-full py-2 pl-8 pr-3 text-xs font-semibold rounded-lg bg-[#0D0F14] border border-[#1E2028] text-[#E8E8E8] focus:border-[#D4AF37] outline-none transition-colors appearance-none cursor-pointer'
                 >
                   <option value="NONE">⚡ Filter: Show All Teams</option>
-                  {Object.entries(teamInfo).map(([k, t]) => (
+                  {Object.entries(teamInfo).filter(([k]) => k !== 'TBD').map(([k, t]) => (
                     <option key={k} value={k}>{t.name} ({k})</option>
                   ))}
                 </select>
@@ -810,6 +817,146 @@ export default function SimulatorPage() {
                 })}
               </motion.div>
             )}
+
+            {/* 🏆 LIVE IPL PLAYOFFS BRACKET & SCENARIOS */}
+            {(() => {
+              const top4 = computedTable.slice(0, 4);
+              const r1 = top4[0]?.team as Team | undefined;
+              const r2 = top4[1]?.team as Team | undefined;
+              const r3 = top4[2]?.team as Team | undefined;
+              const r4 = top4[3]?.team as Team | undefined;
+
+              const q1Win = playoffSim.q1Winner || r1;
+              const q1Lose = q1Win === r1 ? r2 : r1;
+
+              const elimWin = playoffSim.elimWinner || r3;
+
+              const q2Win = playoffSim.q2Winner || q1Lose;
+
+              const finalWin = playoffSim.finalWinner || q1Win;
+
+              const renderMatchBox = (
+                title: string,
+                t1?: Team,
+                t2?: Team,
+                currentWin?: Team,
+                onSelectWin?: (w: Team) => void,
+                subtitle?: string
+              ) => (
+                <div className='rounded-xl border border-[#1E2028] bg-[#111318]/80 p-3 relative overflow-hidden flex flex-col gap-2 transition-all hover:border-[#D4AF37]/30'>
+                  <div className='flex items-center justify-between border-b border-[#1E2028] pb-1.5'>
+                    <span className='text-[10px] font-black text-[#D4AF37] tracking-wider uppercase'>{title}</span>
+                    <span className='text-[9px] text-[#8890A0]'>{subtitle}</span>
+                  </div>
+                  <div className='grid grid-cols-2 gap-2'>
+                    {[t1, t2].map((t, i) => {
+                      if (!t) return <div key={i} className='p-2 bg-[#0D0F14] rounded text-center text-[10px] text-[#3D4356]'>TBD</div>;
+                      const isW = currentWin === t;
+                      const info = teamInfo[t];
+                      return (
+                        <button
+                          key={t}
+                          type='button'
+                          onClick={() => onSelectWin?.(t)}
+                          className='p-2 rounded-lg border text-left flex items-center gap-1.5 transition-all relative overflow-hidden group cursor-pointer'
+                          style={{
+                            background: isW ? 'rgba(212,175,55,0.1)' : '#0D0F14',
+                            borderColor: isW ? '#D4AF37' : '#1E2028',
+                          }}
+                        >
+                          <div className='w-5 h-5 rounded-full p-0.5 shrink-0' style={{ background: '#111318' }}>
+                            <img src={info?.logo} alt={t} className='w-full h-full object-contain' />
+                          </div>
+                          <span className='font-bold text-xs block truncate' style={{ color: isW ? '#D4AF37' : '#E8E8E8' }}>{t}</span>
+                          {isW && <span className='absolute right-1 top-1 text-[8px] text-[#D4AF37]'>★</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {currentWin && (
+                    <div className='text-[10px] text-center text-emerald-400 font-semibold pt-1 border-t border-[#1E2028]/40'>
+                      Advanced: <span className='font-bold text-[#E8E8E8]'>{currentWin}</span>
+                    </div>
+                  )}
+                </div>
+              );
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className='rounded-xl border border-[#D4AF37]/40 bg-gradient-to-b from-[#111318] to-[#05030f] p-5 shadow-2xl relative overflow-hidden mt-6'
+                >
+                  <div className='absolute top-0 right-0 px-4 py-1 bg-gradient-to-r from-[#D4AF37] to-amber-500 text-[#0D0F14] rounded-bl-xl text-[10px] font-black tracking-widest uppercase shadow'>
+                    🏆 Road to Final Scenarios
+                  </div>
+
+                  <div className='mb-4'>
+                    <h3 className='text-lg font-black tracking-tight text-[#E8E8E8] flex items-center gap-2' style={{ fontFamily: 'var(--font-barlow)' }}>
+                      <Trophy size={18} className='text-[#D4AF37]' /> PLAYOFF BRACKET PREDICTOR
+                    </h3>
+                    <p className='text-xs text-[#8890A0] mt-0.5'>
+                      Click any team below to simulate match winners and predict the ultimate IPL 2026 Champion.
+                    </p>
+                  </div>
+
+                  <div className='grid grid-cols-1 md:grid-cols-3 gap-4 relative'>
+                    {/* Column 1: Qual 1 & Eliminator */}
+                    <div className='flex flex-col gap-4 justify-around'>
+                      {renderMatchBox(
+                        'Qualifier 1', r1, r2, q1Win,
+                        (w) => setPlayoffSim(p => ({ ...p, q1Winner: w, finalWinner: undefined })),
+                        'Rank 1 vs Rank 2'
+                      )}
+                      {renderMatchBox(
+                        'Eliminator', r3, r4, elimWin,
+                        (w) => setPlayoffSim(p => ({ ...p, elimWinner: w, q2Winner: undefined })),
+                        'Rank 3 vs Rank 4'
+                      )}
+                    </div>
+
+                    {/* Column 2: Qualifier 2 */}
+                    <div className='flex flex-col justify-center'>
+                      {renderMatchBox(
+                        'Qualifier 2', q1Lose, elimWin, q2Win,
+                        (w) => setPlayoffSim(p => ({ ...p, q2Winner: w, finalWinner: undefined })),
+                        'Loser Q1 vs Winner Elim'
+                      )}
+                    </div>
+
+                    {/* Column 3: Final & Champion Banner */}
+                    <div className='flex flex-col gap-4 justify-center'>
+                      {renderMatchBox(
+                        'Final', q1Win, q2Win, finalWin,
+                        (w) => setPlayoffSim(p => ({ ...p, finalWinner: w })),
+                        'Winner Q1 vs Winner Q2'
+                      )}
+
+                      {finalWin && (
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          className='p-4 rounded-xl bg-gradient-to-r from-[#D4AF37]/20 via-amber-500/10 to-[#D4AF37]/20 border-2 border-[#D4AF37] text-center relative overflow-hidden shadow-[0_0_20px_rgba(212,175,55,0.2)]'
+                        >
+                          <span className='text-[9px] font-black tracking-widest text-[#D4AF37] uppercase block mb-1'>
+                            👑 PREDICTED CHAMPION
+                          </span>
+                          <div className='flex items-center justify-center gap-2'>
+                            <div className='w-8 h-8 rounded-full bg-[#0D0F14] p-1 border-2 border-[#D4AF37]'>
+                              <img src={teamInfo[finalWin]?.logo} alt={finalWin} className='w-full h-full object-contain animate-bounce' />
+                            </div>
+                            <span className='text-2xl font-black text-white tracking-tight' style={{ fontFamily: 'var(--font-barlow)' }}>
+                              {teamInfo[finalWin]?.name}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })()}
           </div>
         </div>
       </div>

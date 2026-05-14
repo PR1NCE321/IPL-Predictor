@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { teamInfo } from '@/data/mockData';
 import { FantasyTeamResult, Team } from '@/types';
 
-const teams = Object.keys(teamInfo) as Team[];
+const teams = (Object.keys(teamInfo) as Team[]).filter(k => k !== 'TBD');
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (

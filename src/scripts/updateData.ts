@@ -49,12 +49,16 @@ function parseOvers(oversStr: number | string): number {
   return fullOvers + balls / 6;
 }
 
-interface NRRDelta {
+interface NRRData {
   winnerDelta: number;
   loserDelta: number;
+  winnerRuns?: number;
+  winnerOvers?: number;
+  loserRuns?: number;
+  loserOvers?: number;
 }
 
-function calculateHeuristicNRR(apiMatch: any): NRRDelta {
+function calculateHeuristicNRR(apiMatch: any): NRRData {
   const marginStr = String(apiMatch.status || '');
   const runsMatch = marginStr.match(/(\d+)\s*runs/i);
   const wicketsMatch = marginStr.match(/(\d+)\s*wickets/i);
@@ -68,7 +72,7 @@ function calculateHeuristicNRR(apiMatch: any): NRRDelta {
   return { winnerDelta: nrrChange, loserDelta: -nrrChange };
 }
 
-function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string): NRRDelta {
+function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string): NRRData {
   const scores: Array<{ inning: string; r: number; w: number; o: number }> = apiMatch.score || [];
 
   if (!scores || scores.length < 2) {
@@ -119,10 +123,14 @@ function calculateRealNRR(apiMatch: any, winnerName: string, loserName: string):
   return {
     winnerDelta: Math.max(0, delta),
     loserDelta: -Math.abs(delta),
+    winnerRuns: winnerInning.r || 0,
+    winnerOvers: parseFloat(String(winnerInning.o || 20)),
+    loserRuns: loserInning.r || 0,
+    loserOvers: parseFloat(String(loserInning.o || 20)),
   };
 }
 
-function getMatchNRRDelta(m: any): NRRDelta {
+function getMatchNRRDelta(m: any): NRRData {
   if (m.nrrDelta) {
     return m.nrrDelta;
   }
@@ -134,6 +142,21 @@ function getMatchNRRDelta(m: any): NRRDelta {
   }
   const winnerDelta = parseFloat(nrrChange.toFixed(3));
   return { winnerDelta, loserDelta: -winnerDelta };
+}
+
+function addOvers(o1: number, o2: number): number {
+  const o1Str = String(o1).split('.');
+  const o2Str = String(o2).split('.');
+  const overs1 = parseInt(o1Str[0], 10) || 0;
+  const balls1 = parseInt(o1Str[1] || '0', 10) || 0;
+  const overs2 = parseInt(o2Str[0], 10) || 0;
+  const balls2 = parseInt(o2Str[1] || '0', 10) || 0;
+  
+  let totalBalls = balls1 + balls2;
+  let extraOvers = Math.floor(totalBalls / 6);
+  totalBalls = totalBalls % 6;
+  
+  return (overs1 + overs2 + extraOvers) + (totalBalls / 10);
 }
 
 // The highest matchNumber already baked into currentPointsTable
@@ -240,8 +263,8 @@ async function updateLiveSystem() {
           }
 
           const loser = winner === team1 ? team2 : team1;
-          const { winnerDelta, loserDelta } = calculateRealNRR(apiMatch, winner, loser);
-          finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta };
+          const { winnerDelta, loserDelta, winnerRuns, winnerOvers, loserRuns, loserOvers } = calculateRealNRR(apiMatch, winner, loser);
+          finalMatches[existingMatchIndex].nrrDelta = { winnerDelta, loserDelta, winnerRuns, winnerOvers, loserRuns, loserOvers };
         } else if (!winner && previousStatus !== 'completed') {
           finalMatches[existingMatchIndex].status = 'completed';
           updatedCount++;
@@ -265,8 +288,30 @@ async function updateLiveSystem() {
           lEntry.matches += 1; lEntry.losses += 1;
 
           const deltas = getMatchNRRDelta(m);
-          wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
-          lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
+          
+          if (deltas.winnerRuns !== undefined && deltas.winnerOvers !== undefined && 
+              wEntry.runsFor !== undefined && wEntry.oversFor !== undefined) {
+             wEntry.runsFor += deltas.winnerRuns;
+             wEntry.oversFor = addOvers(wEntry.oversFor, deltas.winnerOvers);
+             wEntry.runsAgainst += deltas.loserRuns;
+             wEntry.oversAgainst = addOvers(wEntry.oversAgainst, deltas.loserOvers);
+             
+             lEntry.runsFor += deltas.loserRuns;
+             lEntry.oversFor = addOvers(lEntry.oversFor, deltas.loserOvers);
+             lEntry.runsAgainst += deltas.winnerRuns;
+             lEntry.oversAgainst = addOvers(lEntry.oversAgainst, deltas.winnerOvers);
+
+             const wRRFor = parseOvers(wEntry.oversFor) > 0 ? (wEntry.runsFor / parseOvers(wEntry.oversFor)) : 0;
+             const wRRAgainst = parseOvers(wEntry.oversAgainst) > 0 ? (wEntry.runsAgainst / parseOvers(wEntry.oversAgainst)) : 0;
+             wEntry.nrr = parseFloat((wRRFor - wRRAgainst).toFixed(3));
+             
+             const lRRFor = parseOvers(lEntry.oversFor) > 0 ? (lEntry.runsFor / parseOvers(lEntry.oversFor)) : 0;
+             const lRRAgainst = parseOvers(lEntry.oversAgainst) > 0 ? (lEntry.runsAgainst / parseOvers(lEntry.oversAgainst)) : 0;
+             lEntry.nrr = parseFloat((lRRFor - lRRAgainst).toFixed(3));
+          } else {
+             wEntry.nrr = parseFloat((wEntry.nrr + deltas.winnerDelta).toFixed(3));
+             lEntry.nrr = parseFloat((lEntry.nrr + deltas.loserDelta).toFixed(3));
+          }
         }
       } else {
         const t1 = builtTable.find((t: any) => t.team === m.team1);

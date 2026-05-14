@@ -9,7 +9,8 @@ export type Team =
   | 'PBKS'
   | 'LSG'
   | 'RR'
-  | 'SRH';
+  | 'SRH'
+  | 'TBD';
 
 export interface TeamInfo {
   id: string;
@@ -30,6 +31,7 @@ export interface TeamInfo {
 export interface Match {
   id: number;
   matchNumber: number;
+  title?: string;
   team1: Team;
   team2: Team;
   winner?: Team;
@@ -69,12 +71,16 @@ export interface PointsTableEntry {
   nrr: number;
   qualificationChance: number;
   recentForm?: boolean[]; // Array of recent match results (true = win, false = loss)
+  runsFor?: number;
+  oversFor?: number;
+  runsAgainst?: number;
+  oversAgainst?: number;
 }
 
 // Probability Type
 export interface ProbabilityEntry {
   matchNumber: number;
-  probabilities: Record<Team, number>;
+  probabilities: Partial<Record<Team, number>>;
 }
 
 // Simulation Type

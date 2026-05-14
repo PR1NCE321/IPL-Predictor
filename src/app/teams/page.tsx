@@ -52,7 +52,7 @@ export default function TeamsPage() {
         </motion.div>
 
         <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4'>
-          {Object.values(teamInfo).map((team, idx) => {
+          {Object.values(teamInfo).filter(team => team.shortName !== 'TBD').map((team, idx) => {
             const stats = currentPointsTable.find(t => t.team === team.shortName);
             const rank = currentPointsTable.findIndex(t => t.team === team.shortName) + 1;
             const playoffState = getPlayoffState(stats?.qualificationChance, rank);

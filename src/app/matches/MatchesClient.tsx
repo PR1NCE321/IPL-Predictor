@@ -134,7 +134,7 @@ function MatchCard({ match }: { match: Match }) {
       <div className='flex items-start justify-between gap-4 mb-4'>
         <div>
           <p style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.textMuted, fontWeight: 600 }}>
-            Match {match.matchNumber}
+            {match.title || `Match ${match.matchNumber}`}
           </p>
           <p className='text-sm font-semibold' style={{ color: isCompleted ? C.accentGreen : C.white, marginTop: 2 }}>
             {getStatusLabel(match)}
@@ -242,7 +242,7 @@ export default function MatchesClient() {
   const filteredLiveCount = filteredMatches.upcoming.filter((match) => match.status === 'live').length;
   const completedCount = filteredMatches.completed.length;
   const upcomingCount = filteredMatches.upcoming.length;
-  const allTeamKeys = Object.keys(teamInfo) as Team[];
+  const allTeamKeys = (Object.keys(teamInfo) as Team[]).filter(k => k !== 'TBD');
 
   /* ── Pill styles ── */
   const pillBase: React.CSSProperties = {
@@ -337,7 +337,7 @@ export default function MatchesClient() {
                     <Zap size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
                     {spotlightMatch.status === 'live' || spotlightMatch.date === today ? 'SPOTLIGHT MATCH' : 'NEXT MATCH'}
                   </p>
-                  <span style={{ color: C.textSecondary, fontSize: 12 }}>Match {spotlightMatch.matchNumber}</span>
+                  <span style={{ color: C.textSecondary, fontSize: 12 }}>{spotlightMatch.title || `Match ${spotlightMatch.matchNumber}`}</span>
                 </div>
                 <div className='grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center gap-4'>
                   <div className='flex flex-col items-center gap-2'>
