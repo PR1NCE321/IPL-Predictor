@@ -289,17 +289,16 @@ async function updateLiveSystem() {
 
           const deltas = getMatchNRRDelta(m);
           
-          if (deltas.winnerRuns !== undefined && deltas.winnerOvers !== undefined && 
-              wEntry.runsFor !== undefined && wEntry.oversFor !== undefined) {
-             wEntry.runsFor += deltas.winnerRuns;
-             wEntry.oversFor = addOvers(wEntry.oversFor, deltas.winnerOvers);
-             wEntry.runsAgainst += deltas.loserRuns;
-             wEntry.oversAgainst = addOvers(wEntry.oversAgainst, deltas.loserOvers);
+          if (deltas.winnerRuns !== undefined && deltas.winnerOvers !== undefined) {
+             wEntry.runsFor = (wEntry.runsFor || 0) + (deltas.winnerRuns || 0);
+             wEntry.oversFor = addOvers(wEntry.oversFor || 0, deltas.winnerOvers || 0);
+             wEntry.runsAgainst = (wEntry.runsAgainst || 0) + (deltas.loserRuns || 0);
+             wEntry.oversAgainst = addOvers(wEntry.oversAgainst || 0, deltas.loserOvers || 0);
              
-             lEntry.runsFor += deltas.loserRuns;
-             lEntry.oversFor = addOvers(lEntry.oversFor, deltas.loserOvers);
-             lEntry.runsAgainst += deltas.winnerRuns;
-             lEntry.oversAgainst = addOvers(lEntry.oversAgainst, deltas.winnerOvers);
+             lEntry.runsFor = (lEntry.runsFor || 0) + (deltas.loserRuns || 0);
+             lEntry.oversFor = addOvers(lEntry.oversFor || 0, deltas.loserOvers || 0);
+             lEntry.runsAgainst = (lEntry.runsAgainst || 0) + (deltas.winnerRuns || 0);
+             lEntry.oversAgainst = addOvers(lEntry.oversAgainst || 0, deltas.winnerOvers || 0);
 
              const wRRFor = parseOvers(wEntry.oversFor) > 0 ? (wEntry.runsFor / parseOvers(wEntry.oversFor)) : 0;
              const wRRAgainst = parseOvers(wEntry.oversAgainst) > 0 ? (wEntry.runsAgainst / parseOvers(wEntry.oversAgainst)) : 0;

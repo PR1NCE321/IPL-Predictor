@@ -46,6 +46,10 @@ export interface Match {
   nrrDelta?: {
     winnerDelta: number;
     loserDelta: number;
+    winnerRuns?: number;
+    winnerOvers?: number;
+    loserRuns?: number;
+    loserOvers?: number;
   };
 }
 
