@@ -1,6 +1,9 @@
 import { completedMatches, currentPointsTable, allMatches } from '@/data/mockData';
 import { HeadToHeadStats, Team } from '@/types';
 import { estimateWinProbabilityDetailed } from './probability';
+import historicalDataJson from '@/data/historicalH2H.json';
+
+const historicalDataMap = historicalDataJson as Record<string, any>;
 
 const VALID_TEAMS = ['MI', 'CSK', 'RCB', 'KKR', 'GT', 'DC', 'PBKS', 'LSG', 'RR', 'SRH'];
 
@@ -68,6 +71,24 @@ export function getHeadToHeadStats(team1: Team, team2: Team): HeadToHeadStats {
 
   const prediction = estimateWinProbabilityDetailed(mockMatch, currentPointsTable);
 
+  const sortedTeams = [team1, team2].sort();
+  const h2hKey = `${sortedTeams[0]}-${sortedTeams[1]}`;
+  const history = historicalDataMap[h2hKey];
+
+  let formattedHistory = undefined;
+  if (history) {
+    const t1Is1 = history.team1 === team1;
+    formattedHistory = {
+      totalMatches: history.matches,
+      team1Wins: t1Is1 ? history.team1Wins : history.team2Wins,
+      team2Wins: t1Is1 ? history.team2Wins : history.team1Wins,
+      highestScore1: t1Is1 ? history.highestScore1 : history.highestScore2,
+      highestScore2: t1Is1 ? history.highestScore2 : history.highestScore1,
+      lowestScore1: t1Is1 ? history.lowestScore1 : history.lowestScore2,
+      lowestScore2: t1Is1 ? history.lowestScore2 : history.lowestScore1,
+    };
+  }
+
   return {
     team1,
     team2,
@@ -77,6 +98,7 @@ export function getHeadToHeadStats(team1: Team, team2: Team): HeadToHeadStats {
     team1WinRate: meetings.length ? Math.round((team1Wins / meetings.length) * 100) : 0,
     team2WinRate: meetings.length ? Math.round((team2Wins / meetings.length) * 100) : 0,
     lastWinner,
+    historicalData: formattedHistory,
     recentForm: {
       team1: team1Recent,
       team2: team2Recent,

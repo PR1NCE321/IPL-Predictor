@@ -1,0 +1,462 @@
+{
+  "M Chinnaswamy Stadium": {
+    "matches": 80,
+    "avgFirstInnings": 169,
+    "batFirstWins": 37,
+    "chaseWins": 42,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 13533,
+    "matchesWith1stInnings": 80
+  },
+  "PCA Stadium, Mohali": {
+    "matches": 56,
+    "avgFirstInnings": 166,
+    "batFirstWins": 24,
+    "chaseWins": 32,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 9276,
+    "matchesWith1stInnings": 56
+  },
+  "Arun Jaitley Stadium": {
+    "matches": 99,
+    "avgFirstInnings": 172,
+    "batFirstWins": 50,
+    "chaseWins": 47,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 17034,
+    "matchesWith1stInnings": 99
+  },
+  "Wankhede Stadium": {
+    "matches": 128,
+    "avgFirstInnings": 172,
+    "batFirstWins": 58,
+    "chaseWins": 69,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 21970,
+    "matchesWith1stInnings": 128
+  },
+  "Eden Gardens": {
+    "matches": 103,
+    "avgFirstInnings": 168,
+    "batFirstWins": 49,
+    "chaseWins": 54,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 17292,
+    "matchesWith1stInnings": 103
+  },
+  "Sawai Mansingh Stadium": {
+    "matches": 64,
+    "avgFirstInnings": 166,
+    "batFirstWins": 23,
+    "chaseWins": 41,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 10594,
+    "matchesWith1stInnings": 64
+  },
+  "Rajiv Gandhi International Stadium": {
+    "matches": 85,
+    "avgFirstInnings": 165,
+    "batFirstWins": 39,
+    "chaseWins": 45,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 14060,
+    "matchesWith1stInnings": 85
+  },
+  "MA Chidambaram Stadium": {
+    "matches": 94,
+    "avgFirstInnings": 165,
+    "batFirstWins": 51,
+    "chaseWins": 41,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 15525,
+    "matchesWith1stInnings": 94
+  },
+  "Dr DY Patil Sports Academy": {
+    "matches": 17,
+    "avgFirstInnings": 147,
+    "batFirstWins": 7,
+    "chaseWins": 10,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 2493,
+    "matchesWith1stInnings": 17
+  },
+  "Newlands": {
+    "matches": 7,
+    "avgFirstInnings": 139,
+    "batFirstWins": 5,
+    "chaseWins": 1,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 976,
+    "matchesWith1stInnings": 7
+  },
+  "St George's Park": {
+    "matches": 7,
+    "avgFirstInnings": 159,
+    "batFirstWins": 3,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1113,
+    "matchesWith1stInnings": 7
+  },
+  "Kingsmead": {
+    "matches": 15,
+    "avgFirstInnings": 152,
+    "batFirstWins": 9,
+    "chaseWins": 6,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 2280,
+    "matchesWith1stInnings": 15
+  },
+  "SuperSport Park": {
+    "matches": 12,
+    "avgFirstInnings": 155,
+    "batFirstWins": 4,
+    "chaseWins": 8,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1858,
+    "matchesWith1stInnings": 12
+  },
+  "Buffalo Park": {
+    "matches": 3,
+    "avgFirstInnings": 147,
+    "batFirstWins": 2,
+    "chaseWins": 1,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 442,
+    "matchesWith1stInnings": 3
+  },
+  "New Wanderers Stadium": {
+    "matches": 8,
+    "avgFirstInnings": 144,
+    "batFirstWins": 3,
+    "chaseWins": 5,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1152,
+    "matchesWith1stInnings": 8
+  },
+  "De Beers Diamond Oval": {
+    "matches": 3,
+    "avgFirstInnings": 158,
+    "batFirstWins": 1,
+    "chaseWins": 2,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 474,
+    "matchesWith1stInnings": 3
+  },
+  "OUTsurance Oval": {
+    "matches": 2,
+    "avgFirstInnings": 135,
+    "batFirstWins": 1,
+    "chaseWins": 1,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 270,
+    "matchesWith1stInnings": 2
+  },
+  "Brabourne Stadium": {
+    "matches": 10,
+    "avgFirstInnings": 180,
+    "batFirstWins": 6,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1804,
+    "matchesWith1stInnings": 10
+  },
+  "Narendra Modi Stadium": {
+    "matches": 46,
+    "avgFirstInnings": 181,
+    "batFirstWins": 24,
+    "chaseWins": 21,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 8327,
+    "matchesWith1stInnings": 46
+  },
+  "Barabati Stadium": {
+    "matches": 7,
+    "avgFirstInnings": 168,
+    "batFirstWins": 4,
+    "chaseWins": 3,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1174,
+    "matchesWith1stInnings": 7
+  },
+  "Brabourne Stadium, Mumbai": {
+    "matches": 17,
+    "avgFirstInnings": 177,
+    "batFirstWins": 8,
+    "chaseWins": 9,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 3016,
+    "matchesWith1stInnings": 17
+  },
+  "Vidarbha Cricket Association Stadium, Jamtha": {
+    "matches": 3,
+    "avgFirstInnings": 149,
+    "batFirstWins": 2,
+    "chaseWins": 1,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 448,
+    "matchesWith1stInnings": 3
+  },
+  "Himachal Pradesh Cricket Association Stadium": {
+    "matches": 9,
+    "avgFirstInnings": 176,
+    "batFirstWins": 5,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1581,
+    "matchesWith1stInnings": 9
+  },
+  "Nehru Stadium": {
+    "matches": 5,
+    "avgFirstInnings": 147,
+    "batFirstWins": 3,
+    "chaseWins": 2,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 734,
+    "matchesWith1stInnings": 5
+  },
+  "Holkar Cricket Stadium": {
+    "matches": 9,
+    "avgFirstInnings": 160,
+    "batFirstWins": 1,
+    "chaseWins": 8,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1443,
+    "matchesWith1stInnings": 9
+  },
+  "Dr. Y.S. Rajasekhara Reddy ACA-VDCA Cricket Stadium": {
+    "matches": 13,
+    "avgFirstInnings": 157,
+    "batFirstWins": 7,
+    "chaseWins": 6,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 2047,
+    "matchesWith1stInnings": 13
+  },
+  "Subrata Roy Sahara Stadium": {
+    "matches": 16,
+    "avgFirstInnings": 149,
+    "batFirstWins": 10,
+    "chaseWins": 6,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 2391,
+    "matchesWith1stInnings": 16
+  },
+  "Maharashtra Cricket Association Stadium": {
+    "matches": 22,
+    "avgFirstInnings": 166,
+    "batFirstWins": 8,
+    "chaseWins": 14,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 3661,
+    "matchesWith1stInnings": 22
+  },
+  "Shaheed Veer Narayan Singh International Stadium": {
+    "matches": 6,
+    "avgFirstInnings": 146,
+    "batFirstWins": 2,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 878,
+    "matchesWith1stInnings": 6
+  },
+  "JSCA International Stadium Complex": {
+    "matches": 7,
+    "avgFirstInnings": 149,
+    "batFirstWins": 2,
+    "chaseWins": 5,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1043,
+    "matchesWith1stInnings": 7
+  },
+  "Sheikh Zayed Stadium": {
+    "matches": 29,
+    "avgFirstInnings": 159,
+    "batFirstWins": 11,
+    "chaseWins": 16,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 4607,
+    "matchesWith1stInnings": 29
+  },
+  "Sharjah Cricket Stadium": {
+    "matches": 28,
+    "avgFirstInnings": 159,
+    "batFirstWins": 10,
+    "chaseWins": 18,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 4453,
+    "matchesWith1stInnings": 28
+  },
+  "Dubai International Cricket Stadium": {
+    "matches": 46,
+    "avgFirstInnings": 164,
+    "batFirstWins": 21,
+    "chaseWins": 22,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 7533,
+    "matchesWith1stInnings": 46
+  },
+  "Saurashtra Cricket Association Stadium": {
+    "matches": 10,
+    "avgFirstInnings": 169,
+    "batFirstWins": 3,
+    "chaseWins": 6,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1689,
+    "matchesWith1stInnings": 10
+  },
+  "Green Park": {
+    "matches": 4,
+    "avgFirstInnings": 161,
+    "batFirstWins": 0,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 645,
+    "matchesWith1stInnings": 4
+  },
+  "Zayed Cricket Stadium, Abu Dhabi": {
+    "matches": 8,
+    "avgFirstInnings": 159,
+    "batFirstWins": 3,
+    "chaseWins": 5,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1272,
+    "matchesWith1stInnings": 8
+  },
+  "Dr DY Patil Sports Academy, Mumbai": {
+    "matches": 20,
+    "avgFirstInnings": 171,
+    "batFirstWins": 10,
+    "chaseWins": 10,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 3414,
+    "matchesWith1stInnings": 20
+  },
+  "Maharashtra Cricket Association Stadium, Pune": {
+    "matches": 13,
+    "avgFirstInnings": 171,
+    "batFirstWins": 10,
+    "chaseWins": 3,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 2229,
+    "matchesWith1stInnings": 13
+  },
+  "Punjab Cricket Association IS Bindra Stadium, Mohali, Chandigarh": {
+    "matches": 5,
+    "avgFirstInnings": 198,
+    "batFirstWins": 3,
+    "chaseWins": 2,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 989,
+    "matchesWith1stInnings": 5
+  },
+  "Ekana Stadium, Lucknow": {
+    "matches": 24,
+    "avgFirstInnings": 173,
+    "batFirstWins": 10,
+    "chaseWins": 14,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 4163,
+    "matchesWith1stInnings": 24
+  },
+  "M Chinnaswamy Stadium, Bengaluru": {
+    "matches": 22,
+    "avgFirstInnings": 190,
+    "batFirstWins": 11,
+    "chaseWins": 11,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 4189,
+    "matchesWith1stInnings": 22
+  },
+  "Barsapara Cricket Stadium, Guwahati": {
+    "matches": 8,
+    "avgFirstInnings": 169,
+    "batFirstWins": 4,
+    "chaseWins": 4,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1351,
+    "matchesWith1stInnings": 8
+  },
+  "Himachal Pradesh Cricket Association Stadium, Dharamsala": {
+    "matches": 6,
+    "avgFirstInnings": 194,
+    "batFirstWins": 5,
+    "chaseWins": 1,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1166,
+    "matchesWith1stInnings": 6
+  },
+  "Maharaja Yadavindra Singh International Cricket Stadium, Mullanpur": {
+    "matches": 10,
+    "avgFirstInnings": 163,
+    "batFirstWins": 5,
+    "chaseWins": 5,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 1630,
+    "matchesWith1stInnings": 10
+  },
+  "Dr. Y.S. Rajasekhara Reddy ACA-VDCA Cricket Stadium, Visakhapatnam": {
+    "matches": 4,
+    "avgFirstInnings": 209,
+    "batFirstWins": 2,
+    "chaseWins": 2,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 835,
+    "matchesWith1stInnings": 4
+  },
+  "Maharaja Yadavindra Singh International Cricket Stadium, New Chandigarh": {
+    "matches": 3,
+    "avgFirstInnings": 203,
+    "batFirstWins": 1,
+    "chaseWins": 2,
+    "paceWickets": 0,
+    "spinWickets": 0,
+    "total1stInningsRuns": 609,
+    "matchesWith1stInnings": 3
+  }
+}

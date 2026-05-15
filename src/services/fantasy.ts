@@ -1,6 +1,7 @@
 import { playerStats } from '@/data/playerStats';
 import { currentPointsTable, upcomingMatches, completedMatches } from '@/data/mockData';
 import { FantasyRecommendation, FantasyTeamResult, PlayerStats, Team } from '@/types';
+import venueStats from '@/data/venueStats.json';
 
 const ROLE_LIMITS = {
   keeper: { min: 1, max: 2 },
@@ -29,17 +30,29 @@ function normalizeScore(player: PlayerStats, focusTeam?: Team, matchId?: number)
   const focusBonus = focusTeam && player.team === focusTeam ? 7 : 0;
   const qualificationBonus = currentPointsTable.find((entry) => entry.team === player.team)?.qualificationChance || 0;
 
-  // Venue Context Adjustments
+  // Venue Context Adjustments using historical data
   let venueBonus = 0;
-  const venue = getVenueContext(matchId);
-  if (venue) {
-    if (venue.includes('chepauk') || venue.includes('spin')) {
-      if (player.role === 'bowler' || player.role === 'allrounder') venueBonus += 4;
-    } else if (venue.includes('chinnaswamy') || venue.includes('wankhede')) {
-      if (player.role === 'batter' || player.role === 'keeper') venueBonus += 5;
-      if (player.strikeRate && player.strikeRate > 150) venueBonus += 3;
-    } else if (venue.includes('ekana')) {
-      if (player.role === 'bowler' && (player.economy || 0) < 7.5) venueBonus += 5;
+  const venueStr = getVenueContext(matchId);
+  if (venueStr) {
+    const vKey = Object.keys(venueStats).find(k => k.toLowerCase().includes(venueStr) || venueStr.includes(k.toLowerCase()));
+    if (vKey) {
+      const vData = (venueStats as any)[vKey];
+      if (vData.avgFirstInnings > 170) {
+        if (player.role === 'batter' || player.role === 'keeper') venueBonus += 6;
+        if (player.role === 'bowler') venueBonus -= 2;
+        if (player.strikeRate && player.strikeRate > 140) venueBonus += 3;
+      } else if (vData.avgFirstInnings < 155) {
+        if (player.role === 'bowler') venueBonus += 6;
+        if (player.role === 'allrounder') venueBonus += 4;
+        if (player.role === 'batter') venueBonus -= 2;
+      }
+    } else {
+      // Fallback heuristics
+      if (venueStr.includes('chepauk') || venueStr.includes('spin')) {
+        if (player.role === 'bowler' || player.role === 'allrounder') venueBonus += 4;
+      } else if (venueStr.includes('chinnaswamy') || venueStr.includes('wankhede')) {
+        if (player.role === 'batter' || player.role === 'keeper') venueBonus += 5;
+      }
     }
   }
 
@@ -53,11 +66,15 @@ function toRecommendation(player: PlayerStats, focusTeam?: Team, matchId?: numbe
   const recentAvg = recentNumbers.length ? Math.round(recentNumbers.reduce((sum, value) => sum + value, 0) / recentNumbers.length) : 0;
   const wickets = player.wickets || 0;
   
-  const venue = getVenueContext(matchId);
+  const venueStr = getVenueContext(matchId);
   let venueReason = '';
-  if (venue) {
-    if ((venue.includes('chepauk') || venue.includes('spin')) && (player.role === 'bowler' || player.role === 'allrounder')) venueReason = 'Pitch suits bowling';
-    if ((venue.includes('chinnaswamy') || venue.includes('wankhede')) && player.role === 'batter') venueReason = 'Batting paradise';
+  if (venueStr) {
+    const vKey = Object.keys(venueStats).find(k => k.toLowerCase().includes(venueStr) || venueStr.includes(k.toLowerCase()));
+    if (vKey) {
+      const vData = (venueStats as any)[vKey];
+      if (vData.avgFirstInnings > 170 && (player.role === 'batter' || player.role === 'keeper')) venueReason = `High-scoring venue (${vData.avgFirstInnings} avg)`;
+      else if (vData.avgFirstInnings < 155 && player.role === 'bowler') venueReason = `Bowler-friendly venue`;
+    }
   }
 
   const reasonParts = [

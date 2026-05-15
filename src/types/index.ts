@@ -159,6 +159,15 @@ export interface HeadToHeadStats {
     team1QualificationChance: number;
     team2QualificationChance: number;
   };
+  historicalData?: {
+    totalMatches: number;
+    team1Wins: number;
+    team2Wins: number;
+    highestScore1: number;
+    highestScore2: number;
+    lowestScore1: number;
+    lowestScore2: number;
+  };
   aiPrediction?: {
     team1WinProbability: number;
     team2WinProbability: number;

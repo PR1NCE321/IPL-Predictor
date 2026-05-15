@@ -7,6 +7,7 @@ import { Play, TrendingUp, TrendingDown, RefreshCcw, Zap, Save, Download, Sparkl
 import { PointsTableEntry, Team } from '@/types';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { estimateWinProbability, estimateMargin, pickWeightedWinner } from '@/services/probability';
+import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceDot } from 'recharts';
 
 type MarginType = 'runs' | 'wickets';
 interface SimulatedMatch {
@@ -177,6 +178,89 @@ export default function SimulatorPage() {
     const old = [...baseTable].sort((a, b) => b.points !== a.points ? b.points - a.points : b.nrr - a.nrr);
     return old.findIndex(e => e.team === team) - computedTable.findIndex(e => e.team === team);
   };
+
+  const currentSim = currentMatch ? simulatedMatches[currentMatch.id] : null;
+
+  const wormData = useMemo(() => {
+    if (!currentMatch || !currentSim) return null;
+    let t1Total = 0, t2Total = 0;
+    let t1OversMax = 20, t2OversMax = 20;
+
+    if (currentSim.mode === 'deep') {
+      t1Total = currentSim.t1Runs || 0;
+      t2Total = currentSim.t2Runs || 0;
+      t1OversMax = currentSim.t1Overs || 20;
+      t2OversMax = currentSim.t2Overs || 20;
+    } else {
+      // Deterministic pseudo-random generation based on match ID so it doesn't jump around
+      const seed = currentMatch.id * 100;
+      const getRand = (s: number) => Math.abs(Math.sin(s) * 1000) % 1;
+
+      t1Total = 160 + Math.floor(getRand(seed) * 40);
+      if (currentSim.marginType === 'runs') {
+        if (currentSim.winner === currentMatch.team2) {
+          t2Total = t1Total + (currentSim.marginValue || 0); // t2 won by runs, so they batted first and scored more
+        } else {
+          t2Total = Math.max(0, t1Total - (currentSim.marginValue || 0));
+        }
+      } else {
+        if (currentSim.winner === currentMatch.team2) {
+           t2Total = t1Total + 1; // Team 2 chased it
+           t2OversMax = 19.4; 
+        } else {
+           t2Total = t1Total;
+           t1Total = t2Total + 1;
+           t1OversMax = 19.4;
+        }
+      }
+    }
+
+    // Generate path
+    const data = [];
+    let r1 = 0, r2 = 0;
+    let seed1 = currentMatch.id;
+    let seed2 = currentMatch.id + 10;
+    const getRand = (s: number) => Math.abs(Math.sin(s) * 1000) % 1;
+
+    for (let over = 1; over <= 20; over++) {
+      const o1Complete = over <= Math.floor(t1OversMax);
+      const o2Complete = over <= Math.floor(t2OversMax);
+
+      if (o1Complete) {
+         seed1++;
+         const rate1 = over <= 6 ? 1.2 : over <= 15 ? 0.8 : 1.5;
+         r1 += (t1Total / t1OversMax) * rate1 * (0.8 + getRand(seed1) * 0.4);
+      } else if (over === Math.ceil(t1OversMax)) {
+         r1 = t1Total;
+      } else {
+         r1 = t1Total;
+      }
+
+      if (o2Complete) {
+         seed2++;
+         const rate2 = over <= 6 ? 1.2 : over <= 15 ? 0.8 : 1.5;
+         r2 += (t2Total / t2OversMax) * rate2 * (0.8 + getRand(seed2) * 0.4);
+      } else if (over === Math.ceil(t2OversMax)) {
+         r2 = t2Total;
+      } else {
+         r2 = t2Total;
+      }
+
+      data.push({
+        over,
+        [currentMatch.team1]: Math.min(Math.round(r1), t1Total),
+        [currentMatch.team2]: Math.min(Math.round(r2), t2Total),
+      });
+    }
+    
+    // ensure final scores are exact
+    if (data[19]) {
+      data[19][currentMatch.team1] = t1Total;
+      data[19][currentMatch.team2] = t2Total;
+    }
+    
+    return data;
+  }, [currentMatch, currentSim]);
 
   if (loading || !liveMatches || !baseTable) {
     return (
@@ -659,6 +743,33 @@ export default function SimulatorPage() {
                   >
                     <Play size={14} fill='#0D0F14' /> Apply Simulation Result
                   </button>
+
+                  {/* WORM CHART (Only if already simulated) */}
+                  {currentSim && wormData && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className='mt-6 pt-6 border-t border-[#1E2028]'
+                    >
+                      <h3 className='text-[10px] font-bold text-[#8890A0] uppercase tracking-widest mb-4 flex items-center gap-2'>
+                        <TrendingUp size={12} className="text-[#D4AF37]" /> Simulated Innings Progression (Worm)
+                      </h3>
+                      <div className='h-[200px] w-full'>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={wormData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                            <XAxis dataKey="over" tick={{ fill: '#8890A0', fontSize: 10 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: '#8890A0', fontSize: 10 }} axisLine={false} tickLine={false} />
+                            <RechartsTooltip 
+                              contentStyle={{ backgroundColor: '#1A1D26', border: '1px solid #1E2028', borderRadius: 8, fontSize: 12, color: '#E8E8E8' }}
+                              itemStyle={{ fontWeight: 'bold' }}
+                            />
+                            <Line type="monotone" dataKey={currentMatch.team1} stroke={teamInfo[currentMatch.team1].color} strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                            <Line type="monotone" dataKey={currentMatch.team2} stroke={teamInfo[currentMatch.team2].color} strokeWidth={3} dot={false} activeDot={{ r: 6, strokeWidth: 0 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div

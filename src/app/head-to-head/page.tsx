@@ -141,17 +141,33 @@ export default function HeadToHeadPage() {
                 <div className='glass-card rounded-3xl p-6 border border-white/10'>
                   <h3 className='text-lg font-bold text-white mb-6 flex items-center gap-2'><Swords className='text-cyan-400' /> All-Time Meetings</h3>
                   <div className='text-center mb-8'>
-                    <span className='text-5xl font-black text-white'><AnimatedNum value={stats.meetings} /></span>
+                    <span className='text-5xl font-black text-white'><AnimatedNum value={stats.historicalData?.totalMatches || stats.meetings} /></span>
                     <span className='block text-xs uppercase tracking-widest text-slate-400 mt-1'>Total Matches</span>
                   </div>
                   <div className='space-y-4'>
-                    <div className='flex justify-between items-center p-3 rounded-xl bg-white/5'>
-                      <span className='font-bold' style={{ color: t1.color }}>{team1} Wins</span>
-                      <span className='text-2xl font-black text-white'><AnimatedNum value={stats.team1Wins} /></span>
+                    <div className='flex flex-col p-3 rounded-xl bg-white/5 border border-white/5'>
+                      <div className='flex justify-between items-center mb-2'>
+                        <span className='font-bold text-lg' style={{ color: t1.color }}>{team1}</span>
+                        <span className='text-2xl font-black text-white'><AnimatedNum value={stats.historicalData?.team1Wins || stats.team1Wins} /> <span className='text-xs text-slate-500 font-bold'>WINS</span></span>
+                      </div>
+                      {stats.historicalData && (
+                        <div className='flex justify-between text-xs font-medium text-slate-400 border-t border-white/5 pt-2'>
+                          <span>Highest: <span className='text-white font-bold'>{stats.historicalData.highestScore1}</span></span>
+                          <span>Lowest: <span className='text-white font-bold'>{stats.historicalData.lowestScore1}</span></span>
+                        </div>
+                      )}
                     </div>
-                    <div className='flex justify-between items-center p-3 rounded-xl bg-white/5'>
-                      <span className='font-bold' style={{ color: t2.color }}>{team2} Wins</span>
-                      <span className='text-2xl font-black text-white'><AnimatedNum value={stats.team2Wins} /></span>
+                    <div className='flex flex-col p-3 rounded-xl bg-white/5 border border-white/5'>
+                      <div className='flex justify-between items-center mb-2'>
+                        <span className='font-bold text-lg' style={{ color: t2.color }}>{team2}</span>
+                        <span className='text-2xl font-black text-white'><AnimatedNum value={stats.historicalData?.team2Wins || stats.team2Wins} /> <span className='text-xs text-slate-500 font-bold'>WINS</span></span>
+                      </div>
+                      {stats.historicalData && (
+                        <div className='flex justify-between text-xs font-medium text-slate-400 border-t border-white/5 pt-2'>
+                          <span>Highest: <span className='text-white font-bold'>{stats.historicalData.highestScore2}</span></span>
+                          <span>Lowest: <span className='text-white font-bold'>{stats.historicalData.lowestScore2}</span></span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

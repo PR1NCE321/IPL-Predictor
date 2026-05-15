@@ -7,6 +7,8 @@ import { CheckCircle2, Activity, Shield, XCircle, Trophy, TrendingUp, BarChart3,
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { useCountUp } from '@/hooks/useCountUp';
 import type { Match, Team, PointsTableEntry } from '@/types';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
+import teamPhasesData from '@/data/teamPhases.json';
 
 const C = {
   white: '#FFFFFF', textPrimary: '#F0F2F5', textSecondary: '#C5CBD6',
@@ -233,6 +235,23 @@ export default function AnalyticsPage() {
     });
     return result;
   }, [matches, sortedTable]);
+
+  const phaseChartData = useMemo(() => {
+    return Object.keys(teamInfo).filter(t => t !== 'TBD').map(team => {
+      const data = (teamPhasesData as any)[team];
+      if (!data) return null;
+      const ppRR = (data.powerplay.runs / data.powerplay.balls) * 6;
+      const midRR = (data.middle.runs / data.middle.balls) * 6;
+      const deathRR = (data.death.runs / data.death.balls) * 6;
+      return {
+        team,
+        color: teamInfo[team as Team].color,
+        powerplay: Number(ppRR.toFixed(2)),
+        middle: Number(midRR.toFixed(2)),
+        death: Number(deathRR.toFixed(2)),
+      };
+    }).filter(Boolean);
+  }, []);
 
   if (loading || !sortedTable) {
     return (
@@ -714,6 +733,32 @@ export default function AnalyticsPage() {
                 Playoff qualification zone — top 4
               </span>
             </motion.div>
+          </div>
+        </div>
+
+        {/* ── PHASE OF PLAY ANALYSIS ── */}
+        <div style={{ marginTop: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <p style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.gold, fontWeight: 700, margin: 0 }}>PHASE OF PLAY: RUN RATE COMPARISON</p>
+            <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${C.cardBorder}, transparent)` }} />
+          </div>
+
+          <div style={{ background: C.cardBg, borderRadius: 10, padding: '24px 24px', border: `1px solid ${C.cardBorder}`, height: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={phaseChartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                <XAxis dataKey="team" tick={{ fill: C.textSecondary, fontSize: 12, fontFamily: 'var(--font-barlow)', fontWeight: 700 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: C.textMuted, fontSize: 12 }} axisLine={false} tickLine={false} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: '#131620', border: '1px solid #1F2233', borderRadius: 8, color: '#fff' }}
+                  itemStyle={{ fontWeight: 600 }}
+                />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 12, color: C.textMuted, paddingTop: 20 }} />
+                <Bar dataKey="powerplay" name="Powerplay (1-6)" fill="#1D9E75" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="middle" name="Middle (7-15)" fill="#D4AF37" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="death" name="Death (16-20)" fill="#E8003D" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

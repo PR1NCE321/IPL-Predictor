@@ -1,0 +1,240 @@
+{
+  "KKR": {
+    "powerplay": {
+      "runs": 12933,
+      "wickets": 420,
+      "balls": 10071
+    },
+    "middle": {
+      "runs": 18364,
+      "wickets": 616,
+      "balls": 14489
+    },
+    "death": {
+      "runs": 10783,
+      "wickets": 564,
+      "balls": 6838
+    }
+  },
+  "RCB": {
+    "powerplay": {
+      "runs": 12996,
+      "wickets": 383,
+      "balls": 10245
+    },
+    "middle": {
+      "runs": 19132,
+      "wickets": 625,
+      "balls": 14824
+    },
+    "death": {
+      "runs": 12190,
+      "wickets": 581,
+      "balls": 7239
+    }
+  },
+  "CSK": {
+    "powerplay": {
+      "runs": 12030,
+      "wickets": 338,
+      "balls": 9555
+    },
+    "middle": {
+      "runs": 17973,
+      "wickets": 552,
+      "balls": 14154
+    },
+    "death": {
+      "runs": 12014,
+      "wickets": 482,
+      "balls": 7318
+    }
+  },
+  "PBKS": {
+    "powerplay": {
+      "runs": 13147,
+      "wickets": 410,
+      "balls": 10050
+    },
+    "middle": {
+      "runs": 19107,
+      "wickets": 649,
+      "balls": 14655
+    },
+    "death": {
+      "runs": 11404,
+      "wickets": 592,
+      "balls": 7272
+    }
+  },
+  "RR": {
+    "powerplay": {
+      "runs": 11520,
+      "wickets": 323,
+      "balls": 8913
+    },
+    "middle": {
+      "runs": 16852,
+      "wickets": 593,
+      "balls": 13143
+    },
+    "death": {
+      "runs": 9838,
+      "wickets": 515,
+      "balls": 6374
+    }
+  },
+  "DC": {
+    "powerplay": {
+      "runs": 13022,
+      "wickets": 455,
+      "balls": 10119
+    },
+    "middle": {
+      "runs": 18393,
+      "wickets": 627,
+      "balls": 14700
+    },
+    "death": {
+      "runs": 10988,
+      "wickets": 554,
+      "balls": 7067
+    }
+  },
+  "MI": {
+    "powerplay": {
+      "runs": 13451,
+      "wickets": 395,
+      "balls": 10630
+    },
+    "middle": {
+      "runs": 19747,
+      "wickets": 647,
+      "balls": 15462
+    },
+    "death": {
+      "runs": 12816,
+      "wickets": 648,
+      "balls": 7800
+    }
+  },
+  "SRH": {
+    "powerplay": {
+      "runs": 13426,
+      "wickets": 377,
+      "balls": 10336
+    },
+    "middle": {
+      "runs": 18963,
+      "wickets": 602,
+      "balls": 15083
+    },
+    "death": {
+      "runs": 11682,
+      "wickets": 684,
+      "balls": 7693
+    }
+  },
+  "KTK": {
+    "powerplay": {
+      "runs": 680,
+      "wickets": 23,
+      "balls": 533
+    },
+    "middle": {
+      "runs": 831,
+      "wickets": 27,
+      "balls": 744
+    },
+    "death": {
+      "runs": 390,
+      "wickets": 36,
+      "balls": 305
+    }
+  },
+  "PWI": {
+    "powerplay": {
+      "runs": 1895,
+      "wickets": 76,
+      "balls": 1680
+    },
+    "middle": {
+      "runs": 2730,
+      "wickets": 107,
+      "balls": 2481
+    },
+    "death": {
+      "runs": 1733,
+      "wickets": 115,
+      "balls": 1282
+    }
+  },
+  "RPS": {
+    "powerplay": {
+      "runs": 1423,
+      "wickets": 38,
+      "balls": 1120
+    },
+    "middle": {
+      "runs": 1899,
+      "wickets": 55,
+      "balls": 1596
+    },
+    "death": {
+      "runs": 1211,
+      "wickets": 65,
+      "balls": 764
+    }
+  },
+  "GL": {
+    "powerplay": {
+      "runs": 1559,
+      "wickets": 44,
+      "balls": 1125
+    },
+    "middle": {
+      "runs": 2144,
+      "wickets": 80,
+      "balls": 1654
+    },
+    "death": {
+      "runs": 1159,
+      "wickets": 64,
+      "balls": 787
+    }
+  },
+  "LSG": {
+    "powerplay": {
+      "runs": 3115,
+      "wickets": 95,
+      "balls": 2352
+    },
+    "middle": {
+      "runs": 4905,
+      "wickets": 157,
+      "balls": 3528
+    },
+    "death": {
+      "runs": 3015,
+      "wickets": 146,
+      "balls": 1870
+    }
+  },
+  "GT": {
+    "powerplay": {
+      "runs": 3244,
+      "wickets": 73,
+      "balls": 2398
+    },
+    "middle": {
+      "runs": 5022,
+      "wickets": 132,
+      "balls": 3568
+    },
+    "death": {
+      "runs": 3124,
+      "wickets": 141,
+      "balls": 1861
+    }
+  }
+}

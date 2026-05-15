@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Home, CalendarDays, Swords, BarChart3, Gamepad2, Shield, Sparkles, Trophy } from 'lucide-react';
+import { Menu, X, Home, CalendarDays, Swords, BarChart3, Gamepad2, Shield, Sparkles, Trophy, MapPin, Crosshair } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LiveStatusBanner } from './LiveStatusBanner';
@@ -14,6 +14,8 @@ const NAV_LINKS = [
   { label: 'Fantasy', href: '/fantasy', icon: Sparkles },
   { label: 'Simulator', href: '/simulator', icon: Gamepad2 },
   { label: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { label: 'Venues', href: '/analytics/venues', icon: MapPin },
+  { label: 'Battles', href: '/analytics/battles', icon: Crosshair },
   { label: 'Teams', href: '/teams', icon: Shield },
 ];
 
