@@ -1,21 +1,12 @@
 import React from 'react';
 import PlayerLeaderboards from '@/components/sections/PlayerLeaderboards';
+import { getTopBatsmen, getTopBowlers } from '@/services/playerAnalytics';
 
 export const revalidate = 60;
 
-async function fetchPlayerStats() {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/player-stats`, { cache: 'no-store' });
-    if (!res.ok) throw new Error('Failed to fetch player stats');
-    return res.json();
-  } catch (err) {
-    console.error('Failed to load player stats', err);
-    return { topBatsmen: [], topBowlers: [] };
-  }
-}
-
 export default async function PlayersPage() {
-  const data = await fetchPlayerStats();
+  const topBatsmen = getTopBatsmen(10);
+  const topBowlers = getTopBowlers(10);
 
   return (
     <div className='min-h-screen p-6 md:p-8'>
@@ -27,7 +18,7 @@ export default async function PlayersPage() {
           </h1>
           <p style={{ color: '#8890A0', marginTop: 8, fontSize: 14 }}>Top performing batsmen and bowlers of the tournament.</p>
         </div>
-        <PlayerLeaderboards topBatsmen={data.topBatsmen} topBowlers={data.topBowlers} />
+        <PlayerLeaderboards topBatsmen={topBatsmen} topBowlers={topBowlers} />
       </div>
     </div>
   );
