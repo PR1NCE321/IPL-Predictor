@@ -187,10 +187,12 @@ export interface FantasyRecommendation {
 export interface FantasyTeamResult {
   budget: number;
   focusTeam?: Team;
+  matchContext?: number; // Match ID
   totalCost: number;
   totalScore: number;
   captain: FantasyRecommendation;
   viceCaptain: FantasyRecommendation;
   players: FantasyRecommendation[];
   bench: FantasyRecommendation[];
+  allCandidates: FantasyRecommendation[];
 }

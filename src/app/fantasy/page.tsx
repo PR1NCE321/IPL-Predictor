@@ -1,4 +1,4 @@
-import FantasyRecommendations from '@/components/sections/FantasyRecommendations';
+import InteractiveFantasyBuilder from '@/components/sections/InteractiveFantasyBuilder';
 
 export const metadata = {
   title: 'Fantasy Team Recommendations - IPL Predictor',
@@ -13,9 +13,9 @@ export default function FantasyPage() {
           <h1 className='text-4xl font-bold tracking-tight' style={{ fontFamily: 'var(--font-barlow)', color: '#E8E8E8' }}>
             FANTASY PICKS
           </h1>
-          <p style={{ color: '#8890A0', marginTop: 8, fontSize: 14 }}>AI-powered fantasy team recommendations.</p>
+          <p style={{ color: '#8890A0', marginTop: 8, fontSize: 14 }}>Build, optimize, and share your perfect fantasy team.</p>
         </div>
-        <FantasyRecommendations />
+        <InteractiveFantasyBuilder />
       </div>
     </main>
   );

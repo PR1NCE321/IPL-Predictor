@@ -12,10 +12,13 @@ export async function GET(request: Request) {
   const budgetParam = searchParams.get('budget');
   const budget = budgetParam ? Number(budgetParam) : 100;
 
+  const matchIdParam = searchParams.get('matchId');
+  const matchId = matchIdParam ? Number(matchIdParam) : undefined;
+
   if (Number.isNaN(budget) || budget < 60 || budget > 120) {
     return NextResponse.json({ error: 'Budget must be a number between 60 and 120.' }, { status: 400 });
   }
 
-  const result = buildFantasyTeam(isTeam(focusTeam) ? focusTeam : undefined, budget);
+  const result = buildFantasyTeam(isTeam(focusTeam) ? focusTeam : undefined, budget, matchId);
   return NextResponse.json(result);
 }

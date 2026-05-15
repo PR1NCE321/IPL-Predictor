@@ -1,5 +1,5 @@
 import { playerStats } from '@/data/playerStats';
-import { currentPointsTable } from '@/data/mockData';
+import { currentPointsTable, upcomingMatches, completedMatches } from '@/data/mockData';
 import { FantasyRecommendation, FantasyTeamResult, PlayerStats, Team } from '@/types';
 
 const ROLE_LIMITS = {
@@ -12,7 +12,14 @@ const ROLE_LIMITS = {
 const MAX_FROM_ONE_TEAM = 7;
 const DEFAULT_BUDGET = 100;
 
-function normalizeScore(player: PlayerStats, focusTeam?: Team): number {
+function getVenueContext(matchId?: number) {
+  if (!matchId) return null;
+  const match = [...upcomingMatches, ...completedMatches].find(m => m.matchNumber === matchId || m.id === matchId);
+  if (!match) return null;
+  return match.venue.toLowerCase();
+}
+
+function normalizeScore(player: PlayerStats, focusTeam?: Team, matchId?: number): number {
   const battingComponent = (player.runs || 0) * 0.18 + (player.average || 0) * 1.35 + (player.strikeRate || 0) * 0.08;
   const bowlingComponent = (player.wickets || 0) * 2.7 + Math.max(0, (10 - (player.economy || 8))) * 1.4;
   const roleBonus = player.role === 'keeper' ? 5 : player.role === 'allrounder' ? 8 : player.role === 'bowler' ? 4 : 6;
@@ -22,16 +29,39 @@ function normalizeScore(player: PlayerStats, focusTeam?: Team): number {
   const focusBonus = focusTeam && player.team === focusTeam ? 7 : 0;
   const qualificationBonus = currentPointsTable.find((entry) => entry.team === player.team)?.qualificationChance || 0;
 
-  return battingComponent + bowlingComponent + roleBonus + recentBonus + formBonus + focusBonus + qualificationBonus * 0.08;
+  // Venue Context Adjustments
+  let venueBonus = 0;
+  const venue = getVenueContext(matchId);
+  if (venue) {
+    if (venue.includes('chepauk') || venue.includes('spin')) {
+      if (player.role === 'bowler' || player.role === 'allrounder') venueBonus += 4;
+    } else if (venue.includes('chinnaswamy') || venue.includes('wankhede')) {
+      if (player.role === 'batter' || player.role === 'keeper') venueBonus += 5;
+      if (player.strikeRate && player.strikeRate > 150) venueBonus += 3;
+    } else if (venue.includes('ekana')) {
+      if (player.role === 'bowler' && (player.economy || 0) < 7.5) venueBonus += 5;
+    }
+  }
+
+  return battingComponent + bowlingComponent + roleBonus + recentBonus + formBonus + focusBonus + qualificationBonus * 0.08 + venueBonus;
 }
 
-function toRecommendation(player: PlayerStats, focusTeam?: Team): FantasyRecommendation {
-  const score = normalizeScore(player, focusTeam);
+function toRecommendation(player: PlayerStats, focusTeam?: Team, matchId?: number): FantasyRecommendation {
+  const score = normalizeScore(player, focusTeam, matchId);
   const cost = Math.max(6, Math.min(12, Math.round(5 + score / 12)));
   const recentNumbers = (player.recentScores || []).filter((score): score is number => typeof score === 'number');
   const recentAvg = recentNumbers.length ? Math.round(recentNumbers.reduce((sum, value) => sum + value, 0) / recentNumbers.length) : 0;
   const wickets = player.wickets || 0;
+  
+  const venue = getVenueContext(matchId);
+  let venueReason = '';
+  if (venue) {
+    if ((venue.includes('chepauk') || venue.includes('spin')) && (player.role === 'bowler' || player.role === 'allrounder')) venueReason = 'Pitch suits bowling';
+    if ((venue.includes('chinnaswamy') || venue.includes('wankhede')) && player.role === 'batter') venueReason = 'Batting paradise';
+  }
+
   const reasonParts = [
+    venueReason || null,
     player.runs ? `${player.runs} runs` : null,
     player.wickets ? `${player.wickets} wickets` : null,
     recentAvg ? `recent avg ${recentAvg}` : null,
@@ -110,6 +140,8 @@ function selectBestTeam(candidates: FantasyRecommendation[], budget: number) {
     selected.pop();
   }
 
+  // To avoid long running times, only search top 25 candidates
+  const searchCandidates = candidates.slice(0, 25);
   search(0, [], 0, 0);
   return bestTeam;
 }
@@ -153,9 +185,9 @@ function buildFallbackTeam(candidates: FantasyRecommendation[], budget: number) 
   return selected.slice(0, 11);
 }
 
-export function buildFantasyTeam(focusTeam?: Team, budget = DEFAULT_BUDGET): FantasyTeamResult {
+export function buildFantasyTeam(focusTeam?: Team, budget = DEFAULT_BUDGET, matchId?: number): FantasyTeamResult {
   const candidates = playerStats
-    .map((player) => toRecommendation(player, focusTeam))
+    .map((player) => toRecommendation(player, focusTeam, matchId))
     .sort((a, b) => {
       const scorePerCostA = a.fantasyScore / a.cost;
       const scorePerCostB = b.fantasyScore / b.cost;
@@ -169,16 +201,18 @@ export function buildFantasyTeam(focusTeam?: Team, budget = DEFAULT_BUDGET): Fan
   const viceCaptain = team[1] || team[0] || candidates[1] || candidates[0];
   const totalCost = team.reduce((sum, player) => sum + player.cost, 0);
   const totalScore = team.reduce((sum, player) => sum + player.fantasyScore, 0);
-  const bench = candidates.filter((candidate) => !team.some((player) => player.playerId === candidate.playerId)).slice(0, 4);
+  const bench = candidates.filter((candidate) => !team.some((player) => player.playerId === candidate.playerId)).slice(0, 15); // Expand bench
 
   return {
     budget,
     focusTeam,
+    matchContext: matchId,
     totalCost,
     totalScore: Math.round(totalScore * 10) / 10,
     captain,
     viceCaptain,
     players: team,
     bench,
+    allCandidates: candidates,
   };
 }
