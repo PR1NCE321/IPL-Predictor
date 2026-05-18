@@ -15,7 +15,7 @@ const teamNameMap: Record<string, Team> = {
   'kolkata knight riders': 'KKR', 'kkr': 'KKR',
   'gujarat titans': 'GT', 'gt': 'GT',
   'delhi capitals': 'DC', 'dc': 'DC',
-  'punjab kings': 'PBKS', 'pbks': 'PBKS',
+  'punjab kings': 'PBKS', 'pbks': 'PBKS', 'pbsk': 'PBKS', 'punjab kings xi': 'PBKS',
   'lucknow super giants': 'LSG', 'lsg': 'LSG',
   'rajasthan royals': 'RR', 'rr': 'RR',
   'sunrisers hyderabad': 'SRH', 'srh': 'SRH',
@@ -34,10 +34,11 @@ function mapTeamName(value?: string): Team | undefined {
 function parseMatchNumber(matchName?: string): number | undefined {
   if (!matchName) return undefined;
 
-  // "53rd Match" or "Match 53"
+  // "53rd Match" or "Match 53" or "53rd T20 Match"
   const m =
-    matchName.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i) ||
-    matchName.match(/Match\s+(\d+)/i);
+    matchName.match(/(?:\b|^)(\d+)(?:st|nd|rd|th)?\s+(?:T20\s+)?Match\b/i) ||
+    matchName.match(/Match\s+(\d+)/i) ||
+    matchName.match(/Match\s*-\s*(\d+)/i);
 
   return m ? Number(m[1]) : undefined;
 }

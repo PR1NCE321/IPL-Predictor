@@ -50,7 +50,7 @@ const teamNameMap: Record<string, string> = {
   'kolkata knight riders': 'KKR', 'kkr': 'KKR',
   'gujarat titans': 'GT', 'gt': 'GT',
   'delhi capitals': 'DC', 'dc': 'DC',
-  'punjab kings': 'PBKS', 'pbks': 'PBKS',
+  'punjab kings': 'PBKS', 'pbks': 'PBKS', 'pbsk': 'PBKS', 'punjab kings xi': 'PBKS',
   'lucknow super giants': 'LSG', 'lsg': 'LSG',
   'rajasthan royals': 'RR', 'rr': 'RR',
   'sunrisers hyderabad': 'SRH', 'srh': 'SRH',
@@ -403,7 +403,7 @@ export async function GET(request: Request) {
         const team2 = teamNameMap[apiMatch.teams?.[1]?.toLowerCase()];
 
         const m =
-          apiMatch.name.match(/(\d+)(?:st|nd|rd|th)?\s+Match/i) ||
+          apiMatch.name.match(/(?:\b|^)(\d+)(?:st|nd|rd|th)?\s+(?:T20\s+)?Match\b/i) ||
           apiMatch.name.match(/Match\s+(\d+)/i) ||
           apiMatch.name.match(/Match\s*-\s*(\d+)/i);
 

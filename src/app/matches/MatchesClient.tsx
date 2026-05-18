@@ -234,7 +234,7 @@ export default function MatchesClient() {
     upcoming: allUpcoming.filter(predicate),
   };
 
-  const spotlightMatch = filteredMatches.upcoming.find((match) => match.status === 'live' || match.date === today) || filteredMatches.upcoming[0] || null;
+  const spotlightMatch = filteredMatches.upcoming.find((match) => match.status === 'live') || filteredMatches.upcoming[0] || null;
   const remainingUpcoming = spotlightMatch ? filteredMatches.upcoming.filter((match) => match.id !== spotlightMatch.id) : filteredMatches.upcoming;
   const upcomingGroups = groupByDate(remainingUpcoming);
   const completedGroups = groupByDate(filteredMatches.completed);
@@ -335,7 +335,7 @@ export default function MatchesClient() {
                 <div className='flex items-center justify-between mb-5'>
                   <p style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.gold, fontWeight: 700 }}>
                     <Zap size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                    {spotlightMatch.status === 'live' || spotlightMatch.date === today ? 'SPOTLIGHT MATCH' : 'NEXT MATCH'}
+                    {spotlightMatch.status === 'live' || spotlightMatch.date <= today ? 'SPOTLIGHT MATCH' : 'NEXT MATCH'}
                   </p>
                   <span style={{ color: C.textSecondary, fontSize: 12 }}>{spotlightMatch.title || `Match ${spotlightMatch.matchNumber}`}</span>
                 </div>

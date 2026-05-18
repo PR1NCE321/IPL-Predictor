@@ -28,8 +28,9 @@ export default function HomePage() {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const todayMatch = matches.find(m => m.date === today && m.status !== 'completed');
-  const nextMatch = matches.find(m => m.status === 'pending') || null;
+  const liveMatch = matches.find(m => m.status === 'live');
+  const nextPending = matches.find(m => m.status === 'pending');
+  const displayMatch = liveMatch || nextPending || null;
   const recentCompleted = matches.filter(m => m.status === 'completed').slice(-3).reverse();
 
   return (
@@ -59,8 +60,8 @@ export default function HomePage() {
         <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8'>
           {/* Today's / Next Match */}
           <div className='lg:col-span-2'>
-            {(todayMatch || nextMatch) && (() => {
-              const m = todayMatch || nextMatch!;
+            {displayMatch && (() => {
+              const m = displayMatch;
               const t1 = teamInfo[m.team1];
               const t2 = teamInfo[m.team2];
               const isToday = m.date === today;
