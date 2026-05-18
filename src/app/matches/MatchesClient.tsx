@@ -8,6 +8,7 @@ import { useState } from 'react';
 import type { Match, Team } from '@/types';
 import { getHistoricalWinProbability, teamInfo } from '@/data/mockData';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
+import GlobalLoader from '@/components/GlobalLoader';
 
 /* ── Color palette for dark-theme readability ── */
 const C = {
@@ -212,13 +213,7 @@ export default function MatchesClient() {
   const [activeTab, setActiveTab] = useState<TabType>('all');
 
   if (loading || !matches) {
-    return (
-      <div className='min-h-screen p-8'>
-        <div className='max-w-6xl mx-auto space-y-3'>
-          {Array.from({ length: 8 }).map((_, index) => <div key={index} className='skeleton h-20 w-full' />)}
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   const today = new Date().toISOString().split('T')[0];

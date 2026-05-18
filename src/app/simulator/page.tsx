@@ -8,6 +8,7 @@ import { PointsTableEntry, Team } from '@/types';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { estimateWinProbability, estimateMargin, pickWeightedWinner } from '@/services/probability';
 import { LineChart, Line, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Legend, ReferenceDot } from 'recharts';
+import GlobalLoader from '@/components/GlobalLoader';
 
 type MarginType = 'runs' | 'wickets';
 interface SimulatedMatch {
@@ -24,7 +25,7 @@ interface SimulatedMatch {
 
 export default function SimulatorPage() {
   const { matches, pointsTable: baseTable, loading } = useLiveSystemData();
-  const liveMatches = useMemo(() => matches?.filter((m) => m.status === 'pending') ?? null, [matches]);
+  const liveMatches = useMemo(() => matches?.filter((m) => m.status === 'pending' || m.status === 'live') ?? null, [matches]);
 
   const [selectedMatch, setSelectedMatch] = useState<number | null>(null);
   const [simulatedMatches, setSimulatedMatches] = useState<Record<number, SimulatedMatch>>({});
@@ -263,15 +264,7 @@ export default function SimulatorPage() {
   }, [currentMatch, currentSim]);
 
   if (loading || !liveMatches || !baseTable) {
-    return (
-      <div className='min-h-screen p-8 flex items-center justify-center'>
-        <div className='w-full max-w-4xl space-y-4'>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className='skeleton h-16 w-full rounded-xl' style={{ background: '#1A1D26' }} />
-          ))}
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   const isSimActive = Object.keys(simulatedMatches).length > 0;

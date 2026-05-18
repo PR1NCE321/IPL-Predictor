@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, ChevronRight, Calendar, MapPin } from 'lucide
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { useCountUp } from '@/hooks/useCountUp';
 import { teamInfo } from '@/data/mockData';
+import GlobalLoader from '@/components/GlobalLoader';
 
 function StatNumber({ value, suffix = '', decimals = 0 }: { value: number; suffix?: string; decimals?: number }) {
   const animated = useCountUp(value, 800, decimals);
@@ -16,15 +17,7 @@ export default function HomePage() {
   const { pointsTable, matches, loading } = useLiveSystemData();
 
   if (loading || !pointsTable || !matches) {
-    return (
-      <div className='min-h-screen p-8'>
-        <div className='max-w-6xl mx-auto space-y-3'>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className='skeleton h-14 w-full' />
-          ))}
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   const today = new Date().toISOString().split('T')[0];

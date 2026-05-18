@@ -371,16 +371,41 @@ export async function GET(request: Request) {
 
     for (const key of API_KEYS) {
       try {
-        const response = await fetch(`${BASE_URL}/currentMatches?apikey=${key}&offset=0`, {
-          cache: 'no-store'
-        });
-        const json = await response.json();
-        if (json?.status === 'success' && Array.isArray(json.data)) {
-          data = json;
+        let allApiMatches: any[] = [];
+        let currentOffset = 0;
+        let hasMore = true;
+        let pageCount = 0;
+        const maxPages = 4; // Fetch up to 100 matches to ensure we don't miss recent ones
+
+        while (hasMore && pageCount < maxPages) {
+          const response = await fetch(`${BASE_URL}/currentMatches?apikey=${key}&offset=${currentOffset}`, {
+            cache: 'no-store'
+          });
+          const json = await response.json();
+
+          if (json?.status === 'success' && Array.isArray(json.data)) {
+            allApiMatches = allApiMatches.concat(json.data);
+            
+            if (json.data.length < 25) {
+              hasMore = false;
+            } else {
+              currentOffset += 25;
+              pageCount++;
+            }
+          } else {
+            hasMore = false;
+            if (allApiMatches.length === 0) {
+              throw new Error("Failed to fetch page");
+            }
+          }
+        }
+
+        if (allApiMatches.length > 0) {
+          data = { status: 'success', data: allApiMatches };
           success = true;
           break;
         } else {
-          console.warn(`[live-data] API key ${key.slice(0, 8)}… failed. Trying next…`);
+          console.warn(`[live-data] API key ${key.slice(0, 8)}… failed or empty. Trying next…`);
         }
       } catch (err) {
         console.error(`[live-data] Fetch failed with key ${key.slice(0, 8)}…:`, err);

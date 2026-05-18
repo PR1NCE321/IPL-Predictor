@@ -6,6 +6,7 @@ import { teamInfo } from '@/data/mockData';
 import { Trophy, Activity, Target, ArrowRight, CalendarDays } from 'lucide-react';
 import { useLiveSystemData } from '@/hooks/useLiveSystemData';
 import { useCountUp } from '@/hooks/useCountUp';
+import GlobalLoader from '@/components/GlobalLoader';
 
 function AnimatedNum({ value }: { value: number }) {
   const v = useCountUp(value, 800, 0);
@@ -25,13 +26,7 @@ export default function TeamsPage() {
   const { pointsTable: currentPointsTable, matches, loading, error } = useLiveSystemData();
 
   if (loading || !currentPointsTable) {
-    return (
-      <div className='min-h-screen p-8'>
-        <div className='max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-5 gap-4'>
-          {Array.from({ length: 10 }).map((_, i) => <div key={i} className='skeleton h-64 w-full' />)}
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   return (

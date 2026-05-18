@@ -9,6 +9,7 @@ import { useCountUp } from '@/hooks/useCountUp';
 import type { Match, Team, PointsTableEntry } from '@/types';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Cell } from 'recharts';
 import teamPhasesData from '@/data/teamPhases.json';
+import GlobalLoader from '@/components/GlobalLoader';
 
 const C = {
   white: '#FFFFFF', textPrimary: '#F0F2F5', textSecondary: '#C5CBD6',
@@ -254,13 +255,7 @@ export default function AnalyticsPage() {
   }, []);
 
   if (loading || !sortedTable) {
-    return (
-      <div className='min-h-screen p-8'>
-        <div className='max-w-5xl mx-auto space-y-3'>
-          {Array.from({ length: 10 }).map((_, i) => <div key={i} className='skeleton h-14 w-full' />)}
-        </div>
-      </div>
-    );
+    return <GlobalLoader />;
   }
 
   const completed = matches?.filter(m => m.status === 'completed').length || 0;
